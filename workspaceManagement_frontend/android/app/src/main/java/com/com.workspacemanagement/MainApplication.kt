@@ -1,4 +1,4 @@
-package com.anigame_frontend
+package com.workspacemanagement
 
 import android.app.Application
 import com.facebook.react.PackageList
