@@ -1,0 +1,6 @@
+1. npx @react-native-community/cli@latest init workspaceManagement_frontend --version 0.86.2 --package-name com.workspaceManagement_frontend --skip-git-init
+
+2. Convert it to JavaScript — delete the TS parts and add a JS config:
+- Delete App.tsx, __tests__/, tsconfig.json, and (on Windows) the ios/ + Gemfile
+- Remove TS devDeps from package.json (typescript, @types/*, @react-native/typescript-config, @react-native/eslint-config, eslint, prettier, cli-platform-ios) and drop the "ios"/"lint" scripts
+- Add jsconfig.json (the one in this repo is a good starting point):
