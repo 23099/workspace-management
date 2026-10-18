@@ -1,4 +1,4 @@
-import React, { useReducer, useState } from 'react';
+import React, { useReducer, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import { updateCompanySalaryConfig, updateEmployeeSalaryOverride } from '../../store/slices/salarySlice';
 import { useTheme } from '../../context/ThemeContext';
+import storageService, { STORAGE_KEYS } from '../../services/storageService';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
 import Icon from '../../components/common/Icon';
@@ -78,7 +79,16 @@ export const SalaryConfigScreen = ({ navigation }) => {
   const palette = getRolePalette('HR');
 
   const { companyWide, overrides } = useSelector((state) => state.salary);
-  const { users } = useSelector((state) => state.users);
+
+  // Users are loaded from AsyncStorage (Redux no longer stores the user list)
+  const [users, setUsers] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const storedUsers = await storageService.getItem(STORAGE_KEYS.USERS, []);
+      setUsers(storedUsers);
+    })();
+  }, []);
+
   const [activeScope, setActiveScope] = useState('COMPANY'); // 'COMPANY' | 'OVERRIDE'
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('EMP-089'); // Ali Raza
 
@@ -227,7 +237,7 @@ export const SalaryConfigScreen = ({ navigation }) => {
                       {isSelected && <Icon name="checkmark-circle" size={14} color={palette.primary} />}
                     </View>
                     <Text style={[styles.empChipSub, { color: palette.textSecondary }]}>
-                      {emp.id} • {emp.department}
+                      {emp.id}{emp.department ? ` • ${emp.department}` : ''}
                     </Text>
                     <Text style={[styles.empChipSalary, { color: palette.primary }]}>
                       Base: PKR {Number(emp.baseSalary || 150000).toLocaleString()}

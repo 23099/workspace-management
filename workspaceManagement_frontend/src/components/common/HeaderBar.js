@@ -17,6 +17,7 @@ export const HeaderBar = ({
   onProfilePress,
   statusText = 'ONLINE',
   statusColor = '#10B981',
+  showStatus = true,
   isEmbedded = false,
 }) => {
   if (isEmbedded) {
@@ -34,7 +35,9 @@ export const HeaderBar = ({
     if (onProfilePress) {
       onProfilePress();
     } else if (navigation) {
-      if (isAdmin) {
+      if (role === 'SUPER_ADMIN') {
+        navigation.navigate('SuperAdminProfile');
+      } else if (isAdmin) {
         navigation.navigate('AdminProfile');
       } else if (role === 'HR') {
         navigation.navigate('HRProfile');
@@ -150,7 +153,7 @@ export const HeaderBar = ({
         ) : showBack ? null : (
           <>
             {/* Render the React.createElement syllabus status pill only on main screens */}
-            {statusPill}
+            {showStatus && statusPill}
             <TouchableOpacity
               style={[styles.avatarButton, { borderColor: palette.primary }]}
               onPress={handleAvatarPress}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useTheme } from '../../context/ThemeContext';
+import storageService, { STORAGE_KEYS } from '../../services/storageService';
 import HeaderBar from '../../components/common/HeaderBar';
 import Icon from '../../components/common/Icon';
 import { calculateSalaryEstimate, formatCurrency } from '../../utils/salaryCalculator';
@@ -25,7 +26,15 @@ export const SalaryEstimatesScreen = ({ navigation }) => {
   const { getRolePalette } = useTheme();
   const palette = getRolePalette('HR');
 
-  const { users } = useSelector((state) => state.users);
+  // Users are loaded from AsyncStorage (Redux no longer stores the user list)
+  const [users, setUsers] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const storedUsers = await storageService.getItem(STORAGE_KEYS.USERS, []);
+      setUsers(storedUsers);
+    })();
+  }, []);
+
   const salaryConfig = useSelector((state) => state.salary);
 
   const [selectedUserId, setSelectedUserId] = useState('EMP-089'); // Ali Raza
@@ -230,7 +239,7 @@ export const SalaryEstimatesScreen = ({ navigation }) => {
           {selectedUser?.name}
         </Text>
         <Text style={[styles.featuredEmpTitle, { color: palette.textSecondary }]}>
-          {selectedUser?.title} • {selectedUser?.department}
+          {selectedUser?.title}{selectedUser?.department ? ` • ${selectedUser.department}` : ''}
         </Text>
 
         {/* Days Telemetry Strip */}
@@ -380,7 +389,7 @@ export const SalaryEstimatesScreen = ({ navigation }) => {
         <View style={styles.queueInfo}>
           <Text style={[styles.queueName, { color: palette.textPrimary }]}>{item.name}</Text>
           <Text style={[styles.queueTitle, { color: palette.textSecondary }]}>
-            {item.title} • {item.department}
+            {item.title}{item.department ? ` • ${item.department}` : ''}
           </Text>
         </View>
         <View style={styles.queueRight}>

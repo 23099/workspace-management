@@ -8,9 +8,12 @@ import { IMAGES } from '../assets/images';
 
 // Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
-import RegisterScreen from '../screens/auth/RegisterScreen';
+// NOTE: The Register screen (public self sign-up) was removed on purpose.
+// Company Admin accounts are now created from the Super Admin portal, and all
+// other accounts are created by the Company Admin inside the Admin portal.
 
 // Role Navigators
+import SuperAdminNavigator from './SuperAdminNavigator';
 import AdminDrawerNavigator from './AdminDrawerNavigator';
 import HRNavigator from './HRNavigator';
 import ManagerNavigator from './ManagerNavigator';
@@ -23,7 +26,6 @@ const AuthStack = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
     </Stack.Navigator>
   );
 };
@@ -40,10 +42,10 @@ export const AppNavigator = () => {
           <Image source={IMAGES.appLogo} style={styles.splashLogo} resizeMode="contain" />
         </View>
         <Text style={[styles.splashTitle, isDark && styles.textWhite]}>
-          Acme Tech Solutions
+          Workforce Management System
         </Text>
         <Text style={[styles.splashSub, isDark && styles.textMuted]}>
-          Workforce Management System • Enterprise WMS-PK-982
+          Multi-Company Workforce Administration Platform
         </Text>
         <ActivityIndicator size="small" color="#1E293B" style={styles.splashSpinner} />
       </View>
@@ -54,6 +56,8 @@ export const AppNavigator = () => {
     <NavigationContainer>
       {!currentUser ? (
         <AuthStack />
+      ) : currentUser.role === 'SUPER_ADMIN' ? (
+        <SuperAdminNavigator />
       ) : currentUser.role === 'ADMIN' ? (
         <AdminDrawerNavigator />
       ) : currentUser.role === 'HR' ? (

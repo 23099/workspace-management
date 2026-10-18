@@ -104,9 +104,8 @@ export const AttendanceActionScreen = ({ navigation }) => {
     } else {
       reduxDispatch(
         checkIn({
-          userId: currentUser?.id || 'EMP-089',
-          userName: currentUser?.name || 'Ali Raza',
-          department: currentUser?.department || 'Engineering',
+          userId: currentUser?.id || '',
+          userName: currentUser?.name || '',
           distanceMeters: gpsState.distance,
           isGeofenceVerified: true,
           terminal: gpsState.terminal,

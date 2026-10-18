@@ -12,15 +12,18 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import { updateCompanyProfile } from '../../store/slices/companySlice';
 import { useTheme } from '../../context/ThemeContext';
+import storageService, { STORAGE_KEYS } from '../../services/storageService';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
 import Icon from '../../components/common/Icon';
 import { IMAGES } from '../../assets/images';
 
+// Quick coordinate presets for common cities (just geographic shortcuts —
+// not tied to any particular demo company)
 const CAMPUS_PRESETS = [
-  { name: 'Lahore Main Campus', lat: 31.5204, lng: 74.3587, radius: 200 },
-  { name: 'Islamabad Tech HQ', lat: 33.7294, lng: 73.0931, radius: 150 },
-  { name: 'Karachi Innovation Hub', lat: 24.8138, lng: 67.0300, radius: 250 },
+  { name: 'Lahore', lat: 31.5204, lng: 74.3587, radius: 200 },
+  { name: 'Islamabad', lat: 33.7294, lng: 73.0931, radius: 150 },
+  { name: 'Karachi', lat: 24.8138, lng: 67.03, radius: 250 },
 ];
 
 const ALL_DAYS = [
@@ -66,18 +69,20 @@ export const CompanyProfileScreen = ({ navigation }) => {
   };
 
   const handleSave = () => {
-    dispatch(
-      updateCompanyProfile({
-        name,
-        timezone,
-        latitude: parseFloat(latitude) || 31.5204,
-        longitude: parseFloat(longitude) || 74.3587,
-        geofenceRadiusMeters: parseInt(radius, 10) || 200,
-        standardWorkingDaysPerMonth: parseInt(workingDaysPerMonth, 10) || 22,
-        defaultAbsenceDeduction: parseInt(absenceDeduction, 10) || 5000,
-        defaultUnpaidLeaveDeduction: parseInt(unpaidLeaveDeduction, 10) || 3500,
-      })
-    );
+    const payload = {
+      name,
+      timezone,
+      latitude: parseFloat(latitude) || 31.5204,
+      longitude: parseFloat(longitude) || 74.3587,
+      geofenceRadiusMeters: parseInt(radius, 10) || 200,
+      standardWorkingDaysPerMonth: parseInt(workingDaysPerMonth, 10) || 22,
+      defaultAbsenceDeduction: parseInt(absenceDeduction, 10) || 5000,
+      defaultUnpaidLeaveDeduction: parseInt(unpaidLeaveDeduction, 10) || 3500,
+    };
+    // Update Redux (in-memory) and persist to AsyncStorage so the company
+    // profile survives an app reload (same pattern as the user list).
+    dispatch(updateCompanyProfile(payload));
+    storageService.setItem(STORAGE_KEYS.COMPANY, { ...company, ...payload });
     Alert.alert('Configuration Saved', 'Company profile and geofence policies updated.');
   };
 
@@ -103,7 +108,7 @@ export const CompanyProfileScreen = ({ navigation }) => {
             label="Company Name"
             value={name}
             onChangeText={setName}
-            placeholder="Acme Tech Solutions"
+            placeholder="e.g. Your Company Name"
           />
 
           <AppInput
@@ -168,10 +173,10 @@ export const CompanyProfileScreen = ({ navigation }) => {
             />
             {/* Dashed 200m circle overlay */}
             <View style={styles.dashedGeofenceCircle} />
-            {/* Centered Acme Tech HQ Pin */}
+            {/* Centered Company HQ Pin */}
             <View style={styles.mapPinContainer}>
               <View style={styles.pinBubble}>
-                <Text style={styles.pinBubbleText}>Acme Tech HQ</Text>
+                <Text style={styles.pinBubbleText}>Company HQ</Text>
               </View>
               <Icon name="location" size={26} color="#DC2626" />
             </View>

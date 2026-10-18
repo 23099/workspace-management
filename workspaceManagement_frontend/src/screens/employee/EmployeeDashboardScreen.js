@@ -38,10 +38,10 @@ export const EmployeeDashboardScreen = ({ navigation }) => {
         {/* Welcome Header */}
         <View style={styles.welcomeBanner}>
           <Text style={[styles.welcomeGreeting, { color: palette.textPrimary }]}>
-            Welcome back, {currentUser?.name || 'Ali Raza'} 👋
+            Welcome back, {currentUser?.name || 'Team Member'} 👋
           </Text>
           <Text style={[styles.welcomeSub, { color: palette.textSecondary }]}>
-            Software Engineer II • Reporting to Bilal Ahmed
+            Software Engineer II
           </Text>
         </View>
 

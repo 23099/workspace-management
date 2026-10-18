@@ -37,7 +37,7 @@ const attendanceSlice = createSlice({
           id: `ATT-${Date.now()}`,
           userId,
           userName,
-          department: department || 'Engineering',
+          department: department || '', // no department logic — field kept only for old demo logs
           date: dateStr,
           checkInTime: timeStr,
           checkOutTime: null,
@@ -90,7 +90,7 @@ const attendanceSlice = createSlice({
           id: `ATT-OVR-${Date.now()}`,
           userId,
           userName: action.payload.userName || 'Employee',
-          department: 'Engineering',
+          department: '',
           date,
           checkInTime,
           checkOutTime,

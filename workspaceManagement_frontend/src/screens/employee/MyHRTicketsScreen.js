@@ -49,8 +49,8 @@ export const MyHRTicketsScreen = ({ navigation, isEmbedded = false }) => {
 
     dispatch(
       createTicket({
-        userId: currentUser?.id || 'EMP-089',
-        userName: currentUser?.name || 'Ali Raza',
+        userId: currentUser?.id || '',
+        userName: currentUser?.name || '',
         category,
         subject: subject.trim(),
         explanation: explanation.trim(),

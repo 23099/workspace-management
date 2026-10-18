@@ -13,17 +13,23 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
-import AvatarPickerModal from '../../components/common/AvatarPickerModal';
 import Icon from '../../components/common/Icon';
 import { getAvatarSource } from '../../assets/images';
+import { pickProfilePictureFromGallery } from '../../utils/imagePicker';
 
 export const EmployeeProfileScreen = ({ navigation }) => {
-  const { currentUser, updateCurrentUserDP, logout } = useAuth();
+  const { currentUser, updateCurrentUser, logout } = useAuth();
   const { getRolePalette, isDark, toggleTheme } = useTheme();
   const palette = getRolePalette('EMPLOYEE');
 
-  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [taskPushAlerts, setTaskPushAlerts] = useState(true);
+
+  // Opens the device gallery to pick a new profile picture (DP).
+  const handleChangeDp = () => {
+    pickProfilePictureFromGallery((uri) => {
+      updateCurrentUser({ avatarKey: uri, avatarCustomUri: uri });
+    });
+  };
 
   const handleLogout = () => {
     Alert.alert('Terminate Session', 'Are you sure you want to log out of employee workspace?', [
@@ -52,27 +58,17 @@ export const EmployeeProfileScreen = ({ navigation }) => {
             {/* Active DP change badge for Employee */}
             <TouchableOpacity
               style={[styles.cameraBadge, { backgroundColor: palette.primary }]}
-              onPress={() => setShowAvatarModal(true)}
+              onPress={handleChangeDp}
             >
               <Icon name="camera" size={14} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
 
-          <Text style={[styles.userName, { color: palette.textPrimary }]}>{currentUser?.name || 'Ali Raza'}</Text>
+          <Text style={[styles.userName, { color: palette.textPrimary }]}>{currentUser?.name || 'Team Member'}</Text>
           <View style={[styles.roleTag, { backgroundColor: palette.primary }]}>
             <Text style={styles.roleTagText}>Software Engineer II</Text>
           </View>
           <Text style={[styles.userEmail, { color: palette.textSecondary }]}>{currentUser?.email}</Text>
-
-          <TouchableOpacity
-            style={[styles.changeDpBtn, { borderColor: palette.primary }]}
-            onPress={() => setShowAvatarModal(true)}
-          >
-            <Icon name="camera" size={14} color={palette.primary} />
-            <Text style={[styles.changeDpBtnText, { color: palette.primary }]}>
-              📷 Change Profile Photo
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* Telemetry & Leave Quota Row */}
@@ -113,13 +109,13 @@ export const EmployeeProfileScreen = ({ navigation }) => {
 
           <AppInput
             label="Full Legal Name"
-            value={currentUser?.name || 'Ali Raza'}
+            value={currentUser?.name || ''}
             editable={false}
           />
 
           <AppInput
             label="Work Email"
-            value={currentUser?.email || 'ali.raza@acmetech.com'}
+            value={currentUser?.email || ''}
             editable={false}
           />
 
@@ -156,7 +152,7 @@ export const EmployeeProfileScreen = ({ navigation }) => {
 
           <AppInput
             label="Assigned Reporting Manager"
-            value="Bilal Ahmed (Engineering Manager)"
+            value={currentUser?.reportsTo || '—'}
             editable={false}
           />
 
@@ -221,14 +217,6 @@ export const EmployeeProfileScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      <AvatarPickerModal
-        visible={showAvatarModal}
-        onClose={() => setShowAvatarModal(false)}
-        onSelectAvatar={(key) => updateCurrentUserDP(key)}
-        currentAvatar={currentUser?.avatarKey}
-        title="Change Display Picture"
-      />
     </View>
   );
 };
@@ -288,19 +276,6 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 12,
     marginBottom: 12,
-  },
-  changeDpBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1.5,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  changeDpBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
   },
   quotaCard: {
     borderRadius: 12,

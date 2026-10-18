@@ -16,6 +16,7 @@ import {
   publishBroadcast,
   updateLifecycleState,
 } from '../../store/slices/requirementsSlice';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
@@ -24,35 +25,28 @@ import DatePickerModal from '../../components/common/DatePickerModal';
 
 const LIFECYCLE_STATES = ['IN_PROGRESS', 'AWAITING_CLIENT', 'COMPLETED'];
 
-const CLIENT_ORGANIZATIONS = [
-  'Zafar Corp',
-  'Nexa Enterprises',
-  'Apex Global',
-  'Horizon Labs',
-  'PakTech Solutions',
-];
-
 export const RequirementCoordinationScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+  const { currentUser } = useAuth();
   const { getRolePalette } = useTheme();
   const palette = getRolePalette('MANAGER');
 
   const { requirements } = useSelector((state) => state.requirements);
-  const [selectedReqId, setSelectedReqId] = useState(requirements[0]?.id || 'REQ-101');
-  const activeReq = requirements.find((r) => r.id === selectedReqId) || requirements[0] || {};
+  const [selectedReqId, setSelectedReqId] = useState(null);
+  const activeReq = requirements.find((r) => r.id === selectedReqId) || requirements[0] || null;
 
   // Collapsible Form for creating requirement
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newDeadline, setNewDeadline] = useState('2026-11-20');
-  const [newOrg, setNewOrg] = useState('Zafar Corp');
+  const [newDeadline, setNewDeadline] = useState(new Date().toISOString().split('T')[0]);
+  const [newOrg, setNewOrg] = useState('');
   const [calendarVisible, setCalendarVisible] = useState(false);
 
   // Milestone input
   const [newMilestoneText, setNewMilestoneText] = useState('');
 
   // Broadcast text and target
-  const [broadcastTargetReqId, setBroadcastTargetReqId] = useState(requirements[0]?.id || 'REQ-101');
+  const [broadcastTargetReqId, setBroadcastTargetReqId] = useState(null);
   const [broadcastText, setBroadcastText] = useState('');
 
   const targetReq = requirements.find((r) => r.id === broadcastTargetReqId) || activeReq;
@@ -62,16 +56,20 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
       Alert.alert('Validation Error', 'Requirement title is required.');
       return;
     }
+    if (!newOrg.trim()) {
+      Alert.alert('Validation Error', 'Client organization is required.');
+      return;
+    }
     dispatch(
       addRequirement({
         title: newTitle.trim(),
-        organization: newOrg,
+        organization: newOrg.trim(),
         contractDeadline: newDeadline,
       })
     );
     setNewTitle('');
     setShowCreateForm(false);
-    Alert.alert('Requirement Created', `New client requirement initialized for ${newOrg}.`);
+    Alert.alert('Requirement Created', `New client requirement initialized for ${newOrg.trim()}.`);
   };
 
   const handleAddMilestone = () => {
@@ -85,7 +83,9 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
     dispatch(
       publishBroadcast({
         reqId: targetReq.id,
-        author: 'Bilal Ahmed (Engineering Manager)',
+        author: currentUser?.name
+          ? `${currentUser.name} (Engineering Manager)`
+          : 'Engineering Management',
         content: broadcastText.trim(),
       })
     );
@@ -106,35 +106,36 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Client & Requirement Selector Pills */}
-        <View style={styles.selectorCard}>
-          <Text style={[styles.selectorLabel, { color: palette.textSecondary }]}>
-            Active Requirement & Client Scope:
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.reqPillsRow}>
-            {requirements.map((req) => {
-              const isSelected = req.id === activeReq.id;
-              return (
-                <TouchableOpacity
-                  key={req.id}
-                  style={[
-                    styles.reqPill,
-                    { borderColor: palette.cardBorder, backgroundColor: palette.card },
-                    isSelected && { borderColor: palette.primary, backgroundColor: palette.badge },
-                  ]}
-                  onPress={() => setSelectedReqId(req.id)}
-                >
-                  <Text style={[styles.reqPillCode, { color: isSelected ? palette.primary : palette.textPrimary }]}>
-                    {req.code}
-                  </Text>
-                  <Text style={[styles.reqPillOrg, { color: palette.textSecondary }]}>
-                    {req.organization}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+        {requirements.length > 0 && (
+          <View style={styles.selectorCard}>
+            <Text style={[styles.selectorLabel, { color: palette.textSecondary }]}>
+              Active Requirement & Client Scope:
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.reqPillsRow}>
+              {requirements.map((req) => {
+                const isSelected = req.id === activeReq?.id;
+                return (
+                  <TouchableOpacity
+                    key={req.id}
+                    style={[
+                      styles.reqPill,
+                      { borderColor: palette.cardBorder, backgroundColor: palette.card },
+                      isSelected && { borderColor: palette.primary, backgroundColor: palette.badge },
+                    ]}
+                    onPress={() => setSelectedReqId(req.id)}
+                  >
+                    <Text style={[styles.reqPillCode, { color: isSelected ? palette.primary : palette.textPrimary }]}>
+                      {req.code}
+                    </Text>
+                    <Text style={[styles.reqPillOrg, { color: palette.textSecondary }]}>
+                      {req.organization}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Collapsible "+ Create New Client Requirement" Form */}
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
@@ -168,36 +169,13 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
                 placeholder="e.g. Acme Multi-Tenant Auth & Billing"
               />
 
-              {/* Client Organization Dropdown / Preset Chips */}
-              <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-                Client Organization (Select from Directory)
-              </Text>
-              <View style={styles.orgChipsRow}>
-                {CLIENT_ORGANIZATIONS.map((org) => {
-                  const isSelected = newOrg === org;
-                  return (
-                    <TouchableOpacity
-                      key={org}
-                      style={[
-                        styles.orgChip,
-                        { borderColor: palette.cardBorder, backgroundColor: palette.background },
-                        isSelected && { borderColor: palette.primary, backgroundColor: palette.badge },
-                      ]}
-                      onPress={() => setNewOrg(org)}
-                    >
-                      <Text
-                        style={[
-                          styles.orgChipText,
-                          { color: isSelected ? palette.primary : palette.textPrimary },
-                          isSelected && { fontWeight: '700' },
-                        ]}
-                      >
-                        {org}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              {/* Client Organization (free text — real client name) */}
+              <AppInput
+                label="Client Organization *"
+                value={newOrg}
+                onChangeText={setNewOrg}
+                placeholder="e.g. Acme Corporation"
+              />
 
               {/* Contract Deadline with Calendar Picker */}
               <Text style={[styles.fieldLabel, { color: palette.textPrimary, marginTop: 10 }]}>
@@ -229,8 +207,10 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
           title="Select Contractual Client Deadline"
           onSelectDate={(newDate) => setNewDeadline(newDate)}
         />
-
-        {/* Active Requirement Card */}
+        
+        {activeReq ? (
+          <>
+            {/* Active Requirement Card */}
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
           <View style={styles.reqTopRow}>
             <View>
@@ -338,18 +318,17 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
             Clients only see overall milestones and official broadcasts. Internal task assignments, slack buffers and logs remain strictly confidential.
           </Text>
           <View style={styles.privateTaskChipsRow}>
-            <View style={styles.privateTaskChip}>
-              <Icon name="lock-closed" size={12} color="#DC2626" />
-              <Text style={styles.privateTaskText}>🔒 TSK-408: Local Auth</Text>
-            </View>
-            <View style={styles.privateTaskChip}>
-              <Icon name="lock-closed" size={12} color="#DC2626" />
-              <Text style={styles.privateTaskText}>🔒 TSK-409: Stripe Webhook</Text>
-            </View>
-            <View style={styles.privateTaskChip}>
-              <Icon name="lock-closed" size={12} color="#DC2626" />
-              <Text style={styles.privateTaskText}>🔒 TSK-412: Geofence Fallback</Text>
-            </View>
+            {(activeReq?.privateLinkedTasks || []).map((tid) => (
+              <View key={tid} style={styles.privateTaskChip}>
+                <Icon name="lock-closed" size={12} color="#DC2626" />
+                <Text style={styles.privateTaskText}>🔒 {tid}</Text>
+              </View>
+            ))}
+            {(!activeReq?.privateLinkedTasks || activeReq.privateLinkedTasks.length === 0) && (
+              <Text style={[styles.privacyDesc, { color: palette.textSecondary }]}>
+                No internal tasks linked to this requirement yet.
+              </Text>
+            )}
           </View>
         </View>
 
@@ -408,6 +387,15 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
             <Text style={styles.publishBtnText}>Publish Broadcast to {targetReq.organization}</Text>
           </TouchableOpacity>
         </View>
+          </>
+        ) : (
+          <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
+            <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>No client requirements yet</Text>
+            <Text style={[styles.privacyDesc, { color: palette.textSecondary }]}>
+              Create a client requirement to start linking tasks, tracking milestones and broadcasting updates.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );

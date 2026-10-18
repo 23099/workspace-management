@@ -61,8 +61,8 @@ export const MyLeaveRequestsScreen = ({ navigation, isEmbedded = false }) => {
 
     dispatch(
       applyLeave({
-        userId: currentUser?.id || 'EMP-089',
-        userName: currentUser?.name || 'Ali Raza',
+        userId: currentUser?.id || '',
+        userName: currentUser?.name || '',
         type: selectedType,
         startDate,
         endDate,
@@ -74,7 +74,7 @@ export const MyLeaveRequestsScreen = ({ navigation, isEmbedded = false }) => {
 
     Alert.alert(
       'Leave Request Submitted',
-      `Your request for ${daysCount} working days has been forwarded to Bilal Ahmed for review.`
+      `Your request for ${daysCount} working days has been forwarded to your reporting manager for review.`
     );
   };
 

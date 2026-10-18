@@ -9,20 +9,22 @@ import {
   Switch,
   Alert,
 } from 'react-native';
-import { connect } from 'react-redux';
-import { updateOwnDP } from '../../store/slices/usersSlice';
+import AuthContext from '../../context/AuthContext';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
-import AvatarPickerModal from '../../components/common/AvatarPickerModal';
 import Icon from '../../components/common/Icon';
 import { getAvatarSource, IMAGES } from '../../assets/images';
+import { pickProfilePictureFromGallery } from '../../utils/imagePicker';
 
 // Syllabus Requirement: ES6 Class Component with constructor, this.state, this.setState
 export class ProfileSettingsScreen extends React.Component {
+  // Class components read the logged-in user from AuthContext via contextType
+  // (the user list itself lives in AsyncStorage, not Redux).
+  static contextType = AuthContext;
+
   constructor(props) {
     super(props);
     this.state = {
-      showAvatarModal: false,
       isDarkMode: false,
       clientEmail: 'zafar@zafarcorp.com',
       clientPhone: '+92 300 8899112',
@@ -38,13 +40,15 @@ export class ProfileSettingsScreen extends React.Component {
     }));
   };
 
-  handleAvatarSelected = (newAvatarUri) => {
-    const { currentUser, updateOwnDP: dispatchUpdateDP } = this.props;
-    if (currentUser?.id) {
-      dispatchUpdateDP({ userId: currentUser.id, avatarUri: newAvatarUri });
-    }
-    this.setState({ showAvatarModal: false });
-    Alert.alert('Display Picture Updated', 'Your client profile avatar has been refreshed.');
+  // Opens the device gallery to pick a new profile picture (DP).
+  handleChangeDp = () => {
+    pickProfilePictureFromGallery((uri) => {
+      const { currentUser, updateCurrentUser } = this.context;
+      if (currentUser?.id) {
+        // Persists the new DP to the session + the stored users list
+        updateCurrentUser({ avatarKey: uri, avatarCustomUri: uri });
+      }
+    });
   };
 
   handleSignOut = () => {
@@ -63,8 +67,9 @@ export class ProfileSettingsScreen extends React.Component {
   };
 
   render() {
-    const { navigation, currentUser } = this.props;
-    const { showAvatarModal, isDarkMode, clientEmail, clientPhone, orgName, representative, tier } = this.state;
+    const { navigation } = this.props;
+    const { currentUser } = this.context;
+    const { isDarkMode, clientEmail, clientPhone, orgName, representative, tier } = this.state;
 
     return (
       <View style={styles.container}>
@@ -93,7 +98,7 @@ export class ProfileSettingsScreen extends React.Component {
               />
               <TouchableOpacity
                 style={styles.cameraBadge}
-                onPress={() => this.setState({ showAvatarModal: true })}
+                onPress={this.handleChangeDp}
               >
                 <Icon name="camera" size={14} color="#FFFFFF" />
               </TouchableOpacity>
@@ -104,14 +109,6 @@ export class ProfileSettingsScreen extends React.Component {
               <Text style={styles.tierTagText}>{tier}</Text>
             </View>
             <Text style={styles.userOrg}>{orgName}</Text>
-
-            <TouchableOpacity
-              style={styles.changeDpBtn}
-              onPress={() => this.setState({ showAvatarModal: true })}
-            >
-              <Icon name="camera" size={14} color="#92400E" />
-              <Text style={styles.changeDpBtnText}>Change Profile Picture (DP)</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Locked Read-Only Client Details */}
@@ -178,14 +175,6 @@ export class ProfileSettingsScreen extends React.Component {
             <Text style={styles.signOutBtnText}>Sign Out of Account</Text>
           </TouchableOpacity>
         </ScrollView>
-
-        <AvatarPickerModal
-          visible={showAvatarModal}
-          onClose={() => this.setState({ showAvatarModal: false })}
-          onSelectAvatar={this.handleAvatarSelected}
-          currentAvatar={currentUser?.avatarKey || 'dpClientZafar'}
-          title="Update Client Profile Photo"
-        />
       </View>
     );
   }
@@ -272,21 +261,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginBottom: 12,
   },
-  changeDpBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1.5,
-    borderColor: '#92400E',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  changeDpBtnText: {
-    color: '#92400E',
-    fontSize: 12,
-    fontWeight: '700',
-  },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -350,12 +324,4 @@ const styles = StyleSheet.create({
   },
 });
 
-const mapStateToProps = (state) => ({
-  currentUser: state.users.users.find((u) => u.role === 'CLIENT') || null,
-});
-
-const mapDispatchToProps = {
-  updateOwnDP,
-};
-
-export default connect(mapStateToProps, mapDispatchToProps)(ProfileSettingsScreen);
+export default ProfileSettingsScreen;

@@ -173,7 +173,7 @@ export const MyTasksScreen = ({ navigation, isEmbedded = false }) => {
             <View style={styles.deadlineBadge}>
               <Icon name="calendar" size={14} color="#4338CA" />
               <Text style={styles.deadlineBadgeText}>
-                Internal Employee Deadline: {activeTask.internalDeadline} (Verified by Bilal Ahmed)
+                Internal Employee Deadline: {activeTask.internalDeadline}
               </Text>
             </View>
 

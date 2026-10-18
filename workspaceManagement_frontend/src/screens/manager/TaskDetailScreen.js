@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { addTaskLog, updateTaskStatus, editTask, toggleMilestoneSync } from '../../store/slices/tasksSlice';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import storageService, { STORAGE_KEYS } from '../../services/storageService';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
 import Icon from '../../components/common/Icon';
@@ -21,32 +23,45 @@ const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
 export const TaskDetailScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
+  const { currentUser } = useAuth();
   const { getRolePalette } = useTheme();
   const palette = getRolePalette('MANAGER');
 
-  const taskId = route?.params?.taskId || 'TSK-408';
+  const taskId = route?.params?.taskId;
   const { tasks } = useSelector((state) => state.tasks);
-  const { users } = useSelector((state) => state.users);
   const task = tasks.find((t) => t.id === taskId) || tasks[0];
 
-  const engineers = users.filter((u) => u.role === 'EMPLOYEE');
+  // Users are loaded from AsyncStorage (Redux no longer stores the user list)
+  const [users, setUsers] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const storedUsers = await storageService.getItem(STORAGE_KEYS.USERS, []);
+      setUsers(storedUsers);
+    })();
+  }, []);
+
+  // Engineers assignable by this manager = their own direct reports.
+  const engineers = users.filter((u) => u.managerId === currentUser?.id);
 
   const [managerNote, setManagerNote] = useState('');
+
+  // Default edit dates use the current date instead of hardcoded demo dates.
+  const todayStr = new Date().toISOString().split('T')[0];
 
   // Edit Task Modal State
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editTitle, setEditTitle] = useState(task?.title || '');
   const [editDesc, setEditDesc] = useState(task?.description || '');
   const [editPriority, setEditPriority] = useState(task?.priority || 'MEDIUM');
-  const [editInternalDeadline, setEditInternalDeadline] = useState(task?.internalDeadline || '2026-10-22');
-  const [editClientDeadline, setEditClientDeadline] = useState(task?.clientDeadline || '2026-10-25');
+  const [editInternalDeadline, setEditInternalDeadline] = useState(task?.internalDeadline || todayStr);
+  const [editClientDeadline, setEditClientDeadline] = useState(task?.clientDeadline || todayStr);
   const [editAssignedIds, setEditAssignedIds] = useState(
-    task?.assignedToIds || (task?.assignedToId ? [task.assignedToId] : ['EMP-089'])
+    task?.assignedToIds || (task?.assignedToId ? [task.assignedToId] : [])
   );
   const [calendarField, setCalendarField] = useState(null);
 
-  const intDate = new Date(task?.internalDeadline || '2026-10-22');
-  const cliDate = new Date(task?.clientDeadline || '2026-10-25');
+  const intDate = new Date(task?.internalDeadline || todayStr);
+  const cliDate = new Date(task?.clientDeadline || todayStr);
   const diffDays = Math.round((cliDate.getTime() - intDate.getTime()) / (1000 * 60 * 60 * 24));
   const hasConflict = diffDays < 0;
 
@@ -121,7 +136,7 @@ export const TaskDetailScreen = ({ navigation, route }) => {
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
       <HeaderBar
-        title={task?.code || '#TSK-408'}
+        title={task?.code || 'Task Detail'}
         subtitle="Task Detail & Audit"
         showBack
         navigation={navigation}
@@ -142,10 +157,10 @@ export const TaskDetailScreen = ({ navigation, route }) => {
                   setEditTitle(task?.title || '');
                   setEditDesc(task?.description || '');
                   setEditPriority(task?.priority || 'MEDIUM');
-                  setEditInternalDeadline(task?.internalDeadline || '2026-10-22');
-                  setEditClientDeadline(task?.clientDeadline || '2026-10-25');
+                  setEditInternalDeadline(task?.internalDeadline || todayStr);
+                  setEditClientDeadline(task?.clientDeadline || todayStr);
                   setEditAssignedIds(
-                    task?.assignedToIds || (task?.assignedToId ? [task.assignedToId] : ['EMP-089'])
+                    task?.assignedToIds || (task?.assignedToId ? [task.assignedToId] : [])
                   );
                   setIsEditModalVisible(true);
                 }}
@@ -163,7 +178,7 @@ export const TaskDetailScreen = ({ navigation, route }) => {
           <View style={styles.assigneeRow}>
             <Icon name="person" size={14} color="#64748B" />
             <Text style={[styles.assigneeText, { color: palette.textPrimary }]}>
-              Assigned: {task?.assignedToNames ? task.assignedToNames.join(', ') : (task?.assignedToName || 'Ali Raza')}
+              Assigned: {task?.assignedToNames ? task.assignedToNames.join(', ') : (task?.assignedToName || 'Unassigned')}
             </Text>
           </View>
         </View>

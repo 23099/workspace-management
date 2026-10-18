@@ -18,10 +18,9 @@ import AppInput from '../../components/common/AppInput';
 import Icon from '../../components/common/Icon';
 import { isValidEmail, isValidPassword } from '../../utils/validation';
 
-export const LoginScreen = ({ navigation }) => {
+export const LoginScreen = () => {
   const { login } = useAuth();
   const { isDark } = useTheme();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberDevice, setRememberDevice] = useState(true);
@@ -56,7 +55,7 @@ export const LoginScreen = ({ navigation }) => {
   const handleForgotPassword = () => {
     Alert.alert(
       'Password Recovery',
-      'For account password recovery, please contact your Company Administrator or create a new account below.',
+      'For account password recovery, please contact your Company Administrator.',
       [{ text: 'OK' }]
     );
   };
@@ -77,14 +76,14 @@ export const LoginScreen = ({ navigation }) => {
             <Image source={IMAGES.appLogo} style={styles.logoImage} resizeMode="contain" />
           </View>
           <Text style={[styles.brandTitle, isDark && styles.textWhite]}>
-            Acme Tech Solutions
+            Workforce Management System
           </Text>
           <Text style={[styles.brandSubtitle, isDark && styles.textMuted]}>
-            Workforce Management System (WMS)
+            Multi-Company Workforce Administration Platform
           </Text>
           <View style={styles.telemetryPill}>
             <View style={styles.telemetryDot} />
-            <Text style={styles.telemetryText}>Enterprise ID: WMS-PK-982 • Active Session</Text>
+            <Text style={styles.telemetryText}>Secure Enterprise Session</Text>
           </View>
         </View>
 
@@ -109,7 +108,7 @@ export const LoginScreen = ({ navigation }) => {
               setEmail(txt);
               if (errorMessage) setErrorMessage('');
             }}
-            placeholder="e.g. usman@acmetech.com"
+            placeholder="e.g. admin@yourcompany.com"
             keyboardType="email-address"
             autoCapitalize="none"
             returnKeyType="next"
@@ -169,22 +168,24 @@ export const LoginScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Register Account Card */}
+        {/* No Self Sign-Up Card — Accounts are issued by the WMS platform team.
+            (The old "Create Admin / User Account" registration flow was removed.
+             The Super Admin now creates Company Admin accounts from the
+             Super Admin portal.) */}
         <View style={[styles.registerCard, isDark && styles.registerCardDark]}>
+          <View style={styles.infoIconBadge}>
+            <Icon name="shield-checkmark" size={20} color="#1E293B" />
+          </View>
           <Text style={[styles.registerCardTitle, isDark && styles.textWhite]}>
-            Don't have an enterprise account?
+            Accounts Are Issued, Not Self-Registered
           </Text>
           <Text style={[styles.registerCardDesc, isDark && styles.textMuted]}>
-            Register as an Administrator to set up your company workspace, departments, and workforce policies, or create a team account.
+            WMS accounts are created by your company{'\u2019'}s Administrator.{'\n'}
+            New companies are onboarded by our Super Admin, who provisions the
+            Company Admin login. Contact{' '}
+            <Text style={styles.infoEmailText}>superadmin@wms.com</Text> to
+            register your company.
           </Text>
-          <TouchableOpacity
-            style={styles.registerBtn}
-            onPress={() => navigation.navigate('Register')}
-            activeOpacity={0.8}
-          >
-            <Icon name="person-add" size={16} color="#1E293B" />
-            <Text style={styles.registerBtnText}>Create Admin / User Account</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -404,24 +405,25 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     marginTop: 4,
-    marginBottom: 14,
+    marginBottom: 4,
     lineHeight: 18,
   },
-  registerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1.5,
-    borderColor: '#1E293B',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+  // Small circular badge with a shield icon above the info card title
+  infoIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  registerBtnText: {
-    fontSize: 13,
+  // Highlighted email address inside the info card description
+  infoEmailText: {
+    color: '#2563EB',
     fontWeight: '700',
-    color: '#1E293B',
   },
   textWhite: {
     color: '#F8FAFC',

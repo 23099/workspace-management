@@ -13,17 +13,23 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
-import AvatarPickerModal from '../../components/common/AvatarPickerModal';
 import Icon from '../../components/common/Icon';
 import { getAvatarSource } from '../../assets/images';
+import { pickProfilePictureFromGallery } from '../../utils/imagePicker';
 
 export const ManagerProfileScreen = ({ navigation }) => {
-  const { currentUser, updateCurrentUserDP, logout } = useAuth();
+  const { currentUser, updateCurrentUser, logout } = useAuth();
   const { getRolePalette, isDark, toggleTheme } = useTheme();
   const palette = getRolePalette('MANAGER');
 
-  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [soundOnTasks, setSoundOnTasks] = useState(true);
+
+  // Opens the device gallery to pick a new profile picture (DP).
+  const handleChangeDp = () => {
+    pickProfilePictureFromGallery((uri) => {
+      updateCurrentUser({ avatarKey: uri, avatarCustomUri: uri });
+    });
+  };
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Sign out of Engineering Manager session?', [
@@ -51,7 +57,7 @@ export const ManagerProfileScreen = ({ navigation }) => {
             />
             <TouchableOpacity
               style={[styles.cameraBadge, { backgroundColor: palette.primary }]}
-              onPress={() => setShowAvatarModal(true)}
+              onPress={handleChangeDp}
             >
               <Icon name="camera" size={14} color="#FFFFFF" />
             </TouchableOpacity>
@@ -62,37 +68,6 @@ export const ManagerProfileScreen = ({ navigation }) => {
             <Text style={styles.roleTagText}>Engineering Manager</Text>
           </View>
           <Text style={[styles.userEmail, { color: palette.textSecondary }]}>{currentUser?.email}</Text>
-
-          <TouchableOpacity
-            style={[styles.editDpBtn, { borderColor: palette.primary }]}
-            onPress={() => setShowAvatarModal(true)}
-          >
-            <Icon name="camera" size={14} color={palette.primary} />
-            <Text style={[styles.editDpBtnText, { color: palette.primary }]}>
-              ✏️ Edit Avatar / DP
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Managerial Pulse Row */}
-        <View style={[styles.pulseCard, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
-          <Text style={[styles.pulseHeading, { color: palette.textPrimary }]}>Managerial Pulse</Text>
-          <View style={styles.pulseRow}>
-            <View style={styles.pulseItem}>
-              <Text style={[styles.pulseVal, { color: palette.primary }]}>12</Text>
-              <Text style={[styles.pulseSub, { color: palette.textSecondary }]}>Direct Reports</Text>
-            </View>
-            <View style={styles.pulseDivider} />
-            <View style={styles.pulseItem}>
-              <Text style={[styles.pulseVal, { color: '#16A34A' }]}>98.2%</Text>
-              <Text style={[styles.pulseSub, { color: palette.textSecondary }]}>Team Attendance</Text>
-            </View>
-            <View style={styles.pulseDivider} />
-            <View style={styles.pulseItem}>
-              <Text style={[styles.pulseVal, { color: '#D97706' }]}>16</Text>
-              <Text style={[styles.pulseSub, { color: palette.textSecondary }]}>Sprint Tasks</Text>
-            </View>
-          </View>
         </View>
 
         {/* Personal & Contact Details (Managed by Admin - STRICTLY READ-ONLY) */}
@@ -112,31 +87,31 @@ export const ManagerProfileScreen = ({ navigation }) => {
 
           <AppInput
             label="Full Name"
-            value={currentUser?.name || 'Bilal Ahmed'}
+            value={currentUser?.name || ''}
             editable={false}
           />
 
           <AppInput
             label="Work Email"
-            value={currentUser?.email || 'bilal.ahmed@acmetech.com'}
+            value={currentUser?.email || ''}
             editable={false}
           />
 
           <AppInput
             label="Mobile"
-            value={currentUser?.phone || '+92 300 6543210'}
+            value={currentUser?.phone || '—'}
             editable={false}
           />
 
           <AppInput
             label="Work Hours & Timezone"
-            value={currentUser?.workHours || '09:00 - 18:00 PKT'}
+            value={currentUser?.workHours || '—'}
             editable={false}
           />
 
           <AppInput
             label="Slack Handle"
-            value={currentUser?.slackHandle || '@bilal.eng'}
+            value={currentUser?.slackHandle || '—'}
             editable={false}
           />
         </View>
@@ -182,14 +157,6 @@ export const ManagerProfileScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      <AvatarPickerModal
-        visible={showAvatarModal}
-        onClose={() => setShowAvatarModal(false)}
-        onSelectAvatar={(key) => updateCurrentUserDP(key)}
-        currentAvatar={currentUser?.avatarKey}
-        title="Edit Manager Avatar / DP"
-      />
     </View>
   );
 };
@@ -249,51 +216,6 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 12,
     marginBottom: 12,
-  },
-  editDpBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1.5,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  editDpBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  pulseCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 14,
-    marginBottom: 16,
-  },
-  pulseHeading: {
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  pulseRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  pulseItem: {
-    alignItems: 'center',
-  },
-  pulseVal: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  pulseSub: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  pulseDivider: {
-    width: 1,
-    height: 26,
-    backgroundColor: '#E2E8F0',
   },
   card: {
     borderRadius: 12,

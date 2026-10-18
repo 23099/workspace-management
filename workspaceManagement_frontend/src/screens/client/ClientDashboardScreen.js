@@ -106,7 +106,7 @@ export const ClientDashboardScreen = ({ navigation }) => {
 
                 <View style={[styles.bcFooter, { borderTopColor: palette.divider }]}>
                   <Text style={[styles.bcAuthor, { color: palette.textSecondary }]}>
-                    {latestBroadcast?.author || 'Bilal Ahmed (Engineering Manager)'}
+                    {latestBroadcast?.author || 'Engineering Management'}
                   </Text>
                   <Text style={[styles.viewDetailsText, { color: palette.primary }]}>
                     View Milestones →

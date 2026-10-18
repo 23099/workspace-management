@@ -43,7 +43,7 @@ export const MyRequirementsScreen = ({ navigation }) => {
       })
     );
     setClarificationReply('');
-    Alert.alert('Clarification Sent', 'Your reply has been dispatched to Bilal Ahmed.');
+    Alert.alert('Clarification Sent', 'Your reply has been dispatched to the engineering manager.');
   };
 
   return (

@@ -9,17 +9,15 @@ import {
   Switch,
   Alert,
 } from 'react-native';
-import { useSelector, useDispatch } from 'react-redux';
-import { addUser, updateUser } from '../../store/slices/usersSlice';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
-import AvatarPickerModal from '../../components/common/AvatarPickerModal';
 import Icon from '../../components/common/Icon';
-import { AVATAR_DP_PRESETS, getAvatarSource, IMAGES } from '../../assets/images';
+import { getAvatarSource } from '../../assets/images';
 import { isValidEmail } from '../../utils/validation';
+import { pickProfilePictureFromGallery } from '../../utils/imagePicker';
 import storageService, { STORAGE_KEYS } from '../../services/storageService';
-import { SEED_USERS } from '../../data/seedData';
 
 const SYSTEM_ROLES = [
   { id: 'EMPLOYEE', label: 'Employee', desc: 'Can submit leave, punch attendance, view salary & work tasks' },
@@ -30,34 +28,76 @@ const SYSTEM_ROLES = [
 ];
 
 export const EmployeeFormScreen = ({ navigation, route }) => {
-  const dispatch = useDispatch();
   const { getRolePalette } = useTheme();
   const palette = getRolePalette('ADMIN');
 
   const userId = route?.params?.userId;
-  const { users, departments } = useSelector((state) => state.users);
+  const { currentUser } = useAuth();
 
-  const existingUser = userId ? users.find((u) => u.id === userId) : null;
+  // Users are loaded from AsyncStorage (the single source of truth) —
+  // Redux no longer stores the user list.
+  const [users, setUsers] = useState([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Company-scope: a company admin created by the Super Admin only works
+  // with users of their own companyId.
+  const scopedUsers = currentUser?.companyId
+    ? users.filter((u) => u.companyId === currentUser.companyId)
+    : users;
+
+  const existingUser = userId ? scopedUsers.find((u) => u.id === userId) : null;
   const isEditing = Boolean(existingUser);
 
-  const [name, setName] = useState(existingUser?.name || '');
-  const [email, setEmail] = useState(existingUser?.email || '');
-  const [password, setPassword] = useState(existingUser?.password || 'password123');
-  const [role, setRole] = useState(existingUser?.role || 'EMPLOYEE');
-  const [selectedDeptId, setSelectedDeptId] = useState(
-    existingUser?.departmentId || (departments[0]?.id || 'dept_eng')
-  );
-  const [selectedManagerId, setSelectedManagerId] = useState(
-    existingUser?.managerId || 'MGR-022'
-  );
-  const [avatarKey, setAvatarKey] = useState(existingUser?.avatarKey || 'dpEmpAli');
-  const [isActive, setIsActive] = useState(existingUser?.isActive !== false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('password123');
+  const [role, setRole] = useState('EMPLOYEE');
+  const [selectedManagerId, setSelectedManagerId] = useState('');
+  const [avatarKey, setAvatarKey] = useState('dpEmpAli');
+  const [isActive, setIsActive] = useState(true);
 
-  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Available managers list
-  const managerOptions = users.filter((u) => u.role === 'MANAGER' || u.role === 'ADMIN');
+  // Opens the device gallery so the Admin can pick the employee's DP.
+  const handlePickEmployeeDp = () => {
+    pickProfilePictureFromGallery((uri) => {
+      setAvatarKey(uri);
+    });
+  };
+
+  // Load the stored users once on mount; after loading, prefill the form
+  // fields when editing an existing user (or pick a default manager for a
+  // new one). AsyncStorage is async, so the fields start empty and are
+  // filled here.
+  useEffect(() => {
+    (async () => {
+      const storedUsers = await storageService.getItem(STORAGE_KEYS.USERS, []);
+      const scoped = currentUser?.companyId
+        ? storedUsers.filter((u) => u.companyId === currentUser.companyId)
+        : storedUsers;
+      setUsers(scoped);
+
+      const existing = userId ? scoped.find((u) => u.id === userId) : null;
+      if (existing) {
+        setName(existing.name || '');
+        setEmail(existing.email || '');
+        setPassword(existing.password || 'password123');
+        setRole(existing.role || 'EMPLOYEE');
+        setSelectedManagerId(existing.managerId || '');
+        setAvatarKey(existing.avatarKey || 'dpEmpAli');
+        setIsActive(existing.isActive !== false);
+      } else {
+        // New user: default to the first available manager of this company
+        setSelectedManagerId(scoped.find((u) => u.role === 'MANAGER')?.id || '');
+      }
+      setIsLoaded(true);
+    })();
+  }, []);
+
+  // Available managers list (from the loaded, company-scoped users)
+  const managerOptions = scopedUsers.filter(
+    (u) => u.role === 'MANAGER' || u.role === 'ADMIN'
+  );
 
   const handleSave = () => {
     setSubmitted(true);
@@ -70,17 +110,15 @@ export const EmployeeFormScreen = ({ navigation, route }) => {
       return;
     }
 
-    const deptObj = departments.find((d) => d.id === selectedDeptId);
-    const mgrObj = users.find((u) => u.id === selectedManagerId);
+    const mgrObj = scopedUsers.find((u) => u.id === selectedManagerId);
 
+    // Users are typed by ROLE only (no departments in the system).
     const userPayload = {
       id: existingUser?.id || `EMP-${Math.floor(100 + Math.random() * 900)}`,
       name: name.trim(),
       email: email.trim().toLowerCase(),
       password,
       role,
-      departmentId: selectedDeptId,
-      department: deptObj ? deptObj.name : 'Engineering',
       managerId: role === 'EMPLOYEE' ? selectedManagerId : null,
       reportsTo: role === 'EMPLOYEE' && mgrObj ? mgrObj.name : null,
       avatarKey,
@@ -88,31 +126,30 @@ export const EmployeeFormScreen = ({ navigation, route }) => {
       title: existingUser?.title || `${role} Specialist`,
     };
 
+    // Only tag NEW users with the admin's company (on edit we must not
+    // touch companyId, otherwise an existing company tag would be wiped).
+    if (!isEditing && currentUser?.companyId) {
+      userPayload.companyId = currentUser.companyId;
+    }
+
+    // Persist to AsyncStorage — the single source of truth for users.
+    (async () => {
+      try {
+        const storedUsers = await storageService.getItem(STORAGE_KEYS.USERS, []);
+        const updatedUsers = isEditing
+          ? storedUsers.map((u) => (u.id === userPayload.id ? { ...u, ...userPayload } : u))
+          : [userPayload, ...storedUsers];
+        await storageService.setItem(STORAGE_KEYS.USERS, updatedUsers);
+      } catch (err) {
+        console.warn('[EmployeeForm] Failed persisting user to storage:', err);
+      }
+    })();
+
     if (isEditing) {
-      dispatch(updateUser(userPayload));
-      (async () => {
-        try {
-          const storedUsers = await storageService.getItem(STORAGE_KEYS.USERS, SEED_USERS);
-          const updatedUsers = storedUsers.map((u) => (u.id === userPayload.id ? { ...u, ...userPayload } : u));
-          await storageService.setItem(STORAGE_KEYS.USERS, updatedUsers);
-        } catch (err) {
-          console.warn('[EmployeeForm] Failed updating storage:', err);
-        }
-      })();
       Alert.alert('Success', `User record for "${name}" updated successfully.`, [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } else {
-      dispatch(addUser(userPayload));
-      (async () => {
-        try {
-          const storedUsers = await storageService.getItem(STORAGE_KEYS.USERS, SEED_USERS);
-          const updatedUsers = [userPayload, ...storedUsers];
-          await storageService.setItem(STORAGE_KEYS.USERS, updatedUsers);
-        } catch (err) {
-          console.warn('[EmployeeForm] Failed persisting user to storage:', err);
-        }
-      })();
       Alert.alert('User Provisioned', `New user "${name}" created and provisioned.`, [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
@@ -120,6 +157,11 @@ export const EmployeeFormScreen = ({ navigation, route }) => {
   };
 
   const hasMissingManager = role === 'EMPLOYEE' && !selectedManagerId;
+
+  // Wait for the stored users to load before rendering the form
+  if (!isLoaded) {
+    return <View style={[styles.container, { backgroundColor: palette.background }]} />;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
@@ -147,38 +189,15 @@ export const EmployeeFormScreen = ({ navigation, route }) => {
             <View style={styles.dpActionsCol}>
               <TouchableOpacity
                 style={[styles.changeDpBtn, { backgroundColor: palette.primary }]}
-                onPress={() => setShowAvatarModal(true)}
+                onPress={handlePickEmployeeDp}
               >
                 <Icon name="camera" size={15} color="#FFFFFF" />
                 <Text style={styles.changeDpBtnText}>Change Employee DP</Text>
               </TouchableOpacity>
               <Text style={[styles.dpHintText, { color: palette.textSecondary }]}>
-                Select a preset or provide custom photo
+                Pick a photo from the device gallery
               </Text>
             </View>
-          </View>
-
-          {/* Preset DP quick buttons */}
-          <Text style={[styles.presetRowLabel, { color: palette.textPrimary }]}>
-            Quick Role Presets:
-          </Text>
-          <View style={styles.presetsRow}>
-            {AVATAR_DP_PRESETS.map((preset) => (
-              <TouchableOpacity
-                key={preset.id}
-                style={[
-                  styles.presetSmallChip,
-                  { borderColor: palette.cardBorder },
-                  avatarKey === preset.image && { borderColor: preset.accent, borderWidth: 2 },
-                ]}
-                onPress={() => setAvatarKey(preset.image)}
-              >
-                <Image source={preset.image} style={styles.presetSmallImage} />
-                <Text style={[styles.presetSmallText, { color: palette.textPrimary }]}>
-                  {preset.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
           </View>
         </View>
 
@@ -200,7 +219,7 @@ export const EmployeeFormScreen = ({ navigation, route }) => {
             label="Work Email Address *"
             value={email}
             onChangeText={setEmail}
-            placeholder="e.g. ali.raza@acmetech.com"
+            placeholder="e.g. employee@yourcompany.com"
             keyboardType="email-address"
             autoCapitalize="none"
             error={submitted && !isValidEmail(email) ? '! Valid email is required' : null}
@@ -256,28 +275,6 @@ export const EmployeeFormScreen = ({ navigation, route }) => {
           <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>
             Organizational Hierarchy
           </Text>
-
-          <Text style={[styles.inputLabel, { color: palette.textPrimary }]}>Assigned Department</Text>
-          <View style={styles.chipsWrap}>
-            {departments.map((dept) => {
-              const isSelected = selectedDeptId === dept.id;
-              return (
-                <TouchableOpacity
-                  key={dept.id}
-                  style={[
-                    styles.deptSelectChip,
-                    { borderColor: palette.cardBorder },
-                    isSelected && { backgroundColor: palette.primary, borderColor: palette.primary },
-                  ]}
-                  onPress={() => setSelectedDeptId(dept.id)}
-                >
-                  <Text style={[styles.deptSelectText, isSelected ? { color: '#FFFFFF' } : { color: palette.textPrimary }]}>
-                    {dept.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
 
           {role === 'EMPLOYEE' && (
             <View style={{ marginTop: 14 }}>
@@ -342,15 +339,6 @@ export const EmployeeFormScreen = ({ navigation, route }) => {
           <Text style={styles.saveRecordBtnText}>Save User Record</Text>
         </TouchableOpacity>
       </ScrollView>
-
-      {/* Avatar Picker Modal */}
-      <AvatarPickerModal
-        visible={showAvatarModal}
-        onClose={() => setShowAvatarModal(false)}
-        onSelectAvatar={(key) => setAvatarKey(key)}
-        currentAvatar={avatarKey}
-        title="Set Employee DP"
-      />
     </View>
   );
 };
@@ -411,33 +399,6 @@ const styles = StyleSheet.create({
   },
   dpHintText: {
     fontSize: 11,
-  },
-  presetRowLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  presetsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  presetSmallChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 6,
-  },
-  presetSmallImage: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  presetSmallText: {
-    fontSize: 11,
-    fontWeight: '600',
   },
   roleRadioGroup: {
     gap: 8,

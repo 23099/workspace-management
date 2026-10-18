@@ -13,17 +13,23 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
-import AvatarPickerModal from '../../components/common/AvatarPickerModal';
 import Icon from '../../components/common/Icon';
 import { getAvatarSource } from '../../assets/images';
+import { pickProfilePictureFromGallery } from '../../utils/imagePicker';
 
 export const HRProfileScreen = ({ navigation }) => {
-  const { currentUser, updateCurrentUserDP, logout } = useAuth();
+  const { currentUser, updateCurrentUser, logout } = useAuth();
   const { getRolePalette, isDark, toggleTheme } = useTheme();
   const palette = getRolePalette('HR');
 
-  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [notifyOnTickets, setNotifyOnTickets] = useState(true);
+
+  // Opens the device gallery to pick a new profile picture (DP).
+  const handleChangeDp = () => {
+    pickProfilePictureFromGallery((uri) => {
+      updateCurrentUser({ avatarKey: uri, avatarCustomUri: uri });
+    });
+  };
 
   const handleLogout = () => {
     Alert.alert('Log Out of Operations', 'Are you sure you want to exit the HR Operations session?', [
@@ -52,7 +58,7 @@ export const HRProfileScreen = ({ navigation }) => {
             {/* Active DP change button for HR */}
             <TouchableOpacity
               style={[styles.cameraBadge, { backgroundColor: palette.primary }]}
-              onPress={() => setShowAvatarModal(true)}
+              onPress={handleChangeDp}
             >
               <Icon name="camera" size={14} color="#FFFFFF" />
             </TouchableOpacity>
@@ -63,16 +69,6 @@ export const HRProfileScreen = ({ navigation }) => {
             <Text style={styles.roleTagText}>HR & Payroll Specialist</Text>
           </View>
           <Text style={[styles.userEmail, { color: palette.textSecondary }]}>{currentUser?.email}</Text>
-
-          <TouchableOpacity
-            style={[styles.updateDpBtn, { borderColor: palette.primary }]}
-            onPress={() => setShowAvatarModal(true)}
-          >
-            <Icon name="camera" size={14} color={palette.primary} />
-            <Text style={[styles.updateDpBtnText, { color: palette.primary }]}>
-              📷 Update Display Picture
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* Operational Scope 2x2 Privilege Grid */}
@@ -123,13 +119,13 @@ export const HRProfileScreen = ({ navigation }) => {
           {/* Strictly read-only locked inputs: editable={false} */}
           <AppInput
             label="Full Name"
-            value={currentUser?.name || 'Sana Khan'}
+            value={currentUser?.name || ''}
             editable={false}
           />
 
           <AppInput
             label="Work Email"
-            value={currentUser?.email || 'sana.khan@acmetech.com'}
+            value={currentUser?.email || ''}
             editable={false}
           />
 
@@ -198,14 +194,6 @@ export const HRProfileScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      <AvatarPickerModal
-        visible={showAvatarModal}
-        onClose={() => setShowAvatarModal(false)}
-        onSelectAvatar={(key) => updateCurrentUserDP(key)}
-        currentAvatar={currentUser?.avatarKey}
-        title="Update HR Display Picture"
-      />
     </View>
   );
 };
@@ -265,19 +253,6 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 12,
     marginBottom: 12,
-  },
-  updateDpBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1.5,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  updateDpBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
   },
   sectionHeading: {
     fontSize: 14,

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 import { useSelector } from 'react-redux';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import storageService, { STORAGE_KEYS } from '../../services/storageService';
 import HeaderBar from '../../components/common/HeaderBar';
 import Icon from '../../components/common/Icon';
 
@@ -20,27 +21,64 @@ export const TeamAttendanceScreen = ({ navigation }) => {
   const { getRolePalette } = useTheme();
   const palette = getRolePalette('MANAGER');
 
-  const { users } = useSelector((state) => state.users);
-  const { logs } = useSelector((state) => state.attendance);
+  // Users are loaded from AsyncStorage (Redux no longer stores the user list)
+  const [users, setUsers] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const storedUsers = await storageService.getItem(STORAGE_KEYS.USERS, []);
+      setUsers(storedUsers);
+    })();
+  }, []);
 
-  const [selectedDate, setSelectedDate] = useState('2026-10-18');
+  const { logs } = useSelector((state) => state.attendance);
+  const { leaves } = useSelector((state) => state.leaves);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(todayStr);
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [calendarVisible, setCalendarVisible] = useState(false);
 
-  // Filter strictly to direct reports where managerId matches or reports to Bilal
+  // Shift a "YYYY-MM-DD" string by a number of days (for the day stepper).
+  const shiftDate = (dateStr, delta) => {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + delta);
+    return d.toISOString().split('T')[0];
+  };
+
+  // The team = employees whose reporting line points to this manager.
   const myTeam = useMemo(() => {
-    return users.filter(
-      (u) =>
-        u.managerId === currentUser?.id ||
-        u.managerId === 'MGR-022' ||
-        u.reportsTo === 'Bilal Ahmed' ||
-        (currentUser?.role === 'ADMIN' && u.role === 'EMPLOYEE')
-    );
+    return users.filter((u) => u.managerId === currentUser?.id);
   }, [users, currentUser]);
 
-  const presentTeam = useMemo(() => myTeam.slice(0, 6), [myTeam]);
-  const onLeaveTeam = useMemo(() => myTeam.slice(6, 8), [myTeam]);
-  const absentTeam = useMemo(() => myTeam.slice(8), [myTeam]);
+  // Real attendance logs for the selected day.
+  const dayLogs = useMemo(
+    () => logs.filter((l) => l.date === selectedDate),
+    [logs, selectedDate]
+  );
+
+  const isPresent = (uid) =>
+    dayLogs.some(
+      (l) => l.userId === uid && (l.status === 'PRESENT' || l.status === 'CORRECTED_PRESENT')
+    );
+
+  const isOnLeave = (uid) =>
+    leaves.some(
+      (l) =>
+        l.userId === uid &&
+        l.status === 'APPROVED' &&
+        selectedDate >= l.startDate &&
+        selectedDate <= l.endDate
+    );
+
+  const presentTeam = useMemo(() => myTeam.filter((u) => isPresent(u.id)), [myTeam, dayLogs]);
+  const onLeaveTeam = useMemo(
+    () => myTeam.filter((u) => !isPresent(u.id) && isOnLeave(u.id)),
+    [myTeam, dayLogs, leaves]
+  );
+  const absentTeam = useMemo(
+    () => myTeam.filter((u) => !isPresent(u.id) && !isOnLeave(u.id)),
+    [myTeam, dayLogs, leaves]
+  );
 
   const filterPills = [
     { id: 'ALL', label: 'All', count: myTeam.length },
@@ -54,14 +92,17 @@ export const TeamAttendanceScreen = ({ navigation }) => {
     if ((activeFilter === 'ALL' || activeFilter === 'PRESENT') && presentTeam.length > 0) {
       res.push({
         title: `CHECKED-IN & ACTIVE (${presentTeam.length})`,
-        data: presentTeam.map((u, i) => ({
-          id: u.id,
-          name: u.name,
-          title: u.title,
-          checkIn: `09:0${i + 2} AM`,
-          status: 'PRESENT',
-          distance: `${12 + i * 2}.4m`,
-        })),
+        data: presentTeam.map((u) => {
+          const log = dayLogs.find((l) => l.userId === u.id);
+          return {
+            id: u.id,
+            name: u.name,
+            title: u.title,
+            checkIn: log?.checkInTime || 'Checked In',
+            status: 'PRESENT',
+            distance: log?.distanceMeters != null ? `${log.distanceMeters}m` : '—',
+          };
+        }),
         accent: '#16A34A',
       });
     }
@@ -88,68 +129,73 @@ export const TeamAttendanceScreen = ({ navigation }) => {
           title: u.title,
           checkIn: 'No Punch Recorded',
           status: 'ABSENT',
-          distance: '520m Out of Bounds',
+          distance: '—',
         })),
         accent: '#DC2626',
       });
     }
     return res;
-  }, [presentTeam, onLeaveTeam, absentTeam, activeFilter]);
+  }, [presentTeam, onLeaveTeam, absentTeam, dayLogs, activeFilter]);
 
   const handleExportReport = () => {
     Alert.alert(
       'Export Daily Team Attendance Report',
-      `Attendance summary CSV/PDF for ${selectedDate} has been compiled for Bilal Ahmed engineering squad.`,
+      `Attendance summary CSV/PDF for ${selectedDate} has been compiled for ${myTeam.length} team member(s).`,
       [{ text: 'OK' }]
     );
   };
 
   const formattedDisplayDate = useMemo(() => {
-    if (selectedDate === '2026-10-18') return 'Oct 18, 2026 (Today)';
+    if (selectedDate === todayStr) return 'Today';
     const p = selectedDate.split('-');
     if (p.length === 3) {
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       return `${months[parseInt(p[1], 10) - 1]} ${parseInt(p[2], 10)}, ${p[0]}`;
     }
     return selectedDate;
-  }, [selectedDate]);
+  }, [selectedDate, todayStr]);
 
-  const renderItem = ({ item }) => (
-    <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
-      <View style={styles.cardTop}>
-        <View>
-          <Text style={[styles.name, { color: palette.textPrimary }]}>{item.name}</Text>
-          <Text style={[styles.title, { color: palette.textSecondary }]}>{item.title}</Text>
+  const renderItem = ({ item }) => {
+    const pillStyle =
+      item.status === 'PRESENT'
+        ? styles.pillGreen
+        : item.status === 'ABSENT'
+        ? styles.pillRed
+        : styles.pillBlue;
+    const textStyle =
+      item.status === 'PRESENT'
+        ? styles.textGreen
+        : item.status === 'ABSENT'
+        ? styles.textRed
+        : styles.textBlue;
+    const label =
+      item.status === 'PRESENT' ? 'PRESENT' : item.status === 'ABSENT' ? 'ABSENT' : 'ON LEAVE';
+
+    return (
+      <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
+        <View style={styles.cardTop}>
+          <View>
+            <Text style={[styles.name, { color: palette.textPrimary }]}>{item.name}</Text>
+            <Text style={[styles.title, { color: palette.textSecondary }]}>{item.title}</Text>
+          </View>
+          <View style={[styles.statusPill, pillStyle]}>
+            <Text style={[styles.statusText, textStyle]}>{label}</Text>
+          </View>
         </View>
-        <View
-          style={[
-            styles.statusPill,
-            item.status === 'PRESENT' ? styles.pillGreen : styles.pillBlue,
-          ]}
-        >
-          <Text
-            style={[
-              styles.statusText,
-              item.status === 'PRESENT' ? styles.textGreen : styles.textBlue,
-            ]}
-          >
-            {item.status === 'PRESENT' ? 'PRESENT' : 'ON LEAVE'}
-          </Text>
+
+        <View style={styles.cardBottom}>
+          <View style={styles.metaRow}>
+            <Icon name="time" size={13} color="#64748B" />
+            <Text style={[styles.metaText, { color: palette.textSecondary }]}>{item.checkIn}</Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Icon name="location" size={13} color="#64748B" />
+            <Text style={[styles.metaText, { color: palette.textSecondary }]}>{item.distance}</Text>
+          </View>
         </View>
       </View>
-
-      <View style={styles.cardBottom}>
-        <View style={styles.metaRow}>
-          <Icon name="time" size={13} color="#64748B" />
-          <Text style={[styles.metaText, { color: palette.textSecondary }]}>{item.checkIn}</Text>
-        </View>
-        <View style={styles.metaRow}>
-          <Icon name="location" size={13} color="#64748B" />
-          <Text style={[styles.metaText, { color: palette.textSecondary }]}>{item.distance}</Text>
-        </View>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
@@ -163,7 +209,7 @@ export const TeamAttendanceScreen = ({ navigation }) => {
       {/* Date Stepper with Calendar Launcher */}
       <View style={[styles.dateBar, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
         <TouchableOpacity
-          onPress={() => setSelectedDate('2026-10-17')}
+          onPress={() => setSelectedDate(shiftDate(selectedDate, -1))}
           accessibilityLabel="Previous Day"
         >
           <Text style={styles.stepperArrow}>&lt;</Text>
@@ -181,7 +227,7 @@ export const TeamAttendanceScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => setSelectedDate('2026-10-19')}
+          onPress={() => setSelectedDate(shiftDate(selectedDate, 1))}
           accessibilityLabel="Next Day"
         >
           <Text style={styles.stepperArrow}>&gt;</Text>
@@ -189,7 +235,7 @@ export const TeamAttendanceScreen = ({ navigation }) => {
 
         <TouchableOpacity
           style={[styles.todayTag, { backgroundColor: palette.primary }]}
-          onPress={() => setSelectedDate('2026-10-18')}
+          onPress={() => setSelectedDate(todayStr)}
         >
           <Text style={styles.todayTagText}>Today</Text>
         </TouchableOpacity>
@@ -244,6 +290,15 @@ export const TeamAttendanceScreen = ({ navigation }) => {
         )}
         stickySectionHeadersEnabled
         contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <View style={styles.emptyWrap}>
+            <Text style={[styles.emptyText, { color: palette.textSecondary }]}>
+              {myTeam.length === 0
+                ? 'No team members are assigned to you yet.'
+                : 'No attendance records for this date.'}
+            </Text>
+          </View>
+        }
       />
 
       {/* Bottom Export Button */}
@@ -332,6 +387,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
+  emptyWrap: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 13,
+  },
   card: {
     borderRadius: 10,
     borderWidth: 1,
@@ -359,12 +421,14 @@ const styles = StyleSheet.create({
   },
   pillGreen: { backgroundColor: '#DCFCE7' },
   pillBlue: { backgroundColor: '#DBEAFE' },
+  pillRed: { backgroundColor: '#FEE2E2' },
   statusText: {
     fontSize: 10,
     fontWeight: '800',
   },
   textGreen: { color: '#16A34A' },
   textBlue: { color: '#1D4ED8' },
+  textRed: { color: '#DC2626' },
   cardBottom: {
     flexDirection: 'row',
     gap: 16,

@@ -29,8 +29,8 @@ const tasksSlice = createSlice({
       const bufferDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
       const hasConflict = bufferDays < 0;
 
-      const primaryId = assignedToId || (assignedToIds.length > 0 ? assignedToIds[0] : 'EMP-089');
-      const primaryName = assignedToName || (assignedToNames.length > 0 ? assignedToNames.join(', ') : 'Ali Raza');
+      const primaryId = assignedToId || (assignedToIds.length > 0 ? assignedToIds[0] : '');
+      const primaryName = assignedToName || (assignedToNames.length > 0 ? assignedToNames.join(', ') : 'Unassigned');
 
       const newTask = {
         id: `TSK-${Math.floor(400 + Math.random() * 500)}`,

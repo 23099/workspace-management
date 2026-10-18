@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,9 @@ import {
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { createTask } from '../../store/slices/tasksSlice';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import storageService, { STORAGE_KEYS } from '../../services/storageService';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
 import Icon from '../../components/common/Icon';
@@ -27,27 +29,43 @@ const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
 export const TaskManagementScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+  const { currentUser } = useAuth();
   const { getRolePalette } = useTheme();
   const palette = getRolePalette('MANAGER');
 
   const { tasks } = useSelector((state) => state.tasks);
-  const { users } = useSelector((state) => state.users);
-  const { requirements } = useSelector((state) => state.requirements);
+
+  // Users are loaded from AsyncStorage (Redux no longer stores the user list)
+  const [users, setUsers] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const storedUsers = await storageService.getItem(STORAGE_KEYS.USERS, []);
+      setUsers(storedUsers);
+    })();
+  }, []);
 
   const [activeTab, setActiveTab] = useState('ALL');
   const [isCreateOpen, setIsCreateOpen] = useState(true);
 
+  // Form default dates use the current date instead of hardcoded demo dates.
+  const todayStr = new Date().toISOString().split('T')[0];
+  const addDays = (dateStr, days) => {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+  };
+
   // Form State for creating task (with multi-engineer support)
   const [taskTitle, setTaskTitle] = useState('');
-  const [assignedToIds, setAssignedToIds] = useState(['EMP-089']); // Ali Raza default
+  const [assignedToIds, setAssignedToIds] = useState([]);
   const [priority, setPriority] = useState('HIGH');
-  const [requirementId, setRequirementId] = useState('REQ-101');
-  const [internalDeadline, setInternalDeadline] = useState('2026-10-22');
-  const [clientDeadline, setClientDeadline] = useState('2026-10-25');
+  const [internalDeadline, setInternalDeadline] = useState(todayStr);
+  const [clientDeadline, setClientDeadline] = useState(addDays(todayStr, 7));
   const [calendarField, setCalendarField] = useState(null); // 'internal' | 'client' | null
   const [hasFormError, setHasFormError] = useState(false);
 
-  const engineers = users.filter((u) => u.role === 'EMPLOYEE');
+  // Engineers assignable by this manager = their own direct reports.
+  const engineers = users.filter((u) => u.managerId === currentUser?.id);
 
   const toggleEngineer = (id) => {
     if (assignedToIds.includes(id)) {
@@ -73,6 +91,16 @@ export const TaskManagementScreen = ({ navigation }) => {
       return;
     }
 
+    if (engineers.length === 0) {
+      Alert.alert('No Team Members', 'No employees report to you yet, so a task cannot be assigned.');
+      return;
+    }
+
+    if (assignedToIds.length === 0) {
+      Alert.alert('Select Engineer', 'Tap at least one engineer to assign this task.');
+      return;
+    }
+
     const assignedUsers = engineers.filter((e) => assignedToIds.includes(e.id));
     const assignedNames = assignedUsers.map((e) => e.name);
 
@@ -83,7 +111,6 @@ export const TaskManagementScreen = ({ navigation }) => {
         assignedToNames,
         assignedToId: assignedToIds[0],
         assignedToName: assignedNames.join(', '),
-        requirementId,
         priority,
         internalDeadline,
         clientDeadline,
@@ -389,7 +416,7 @@ export const TaskManagementScreen = ({ navigation }) => {
 
               <View style={[styles.cardFooter, { borderTopColor: palette.divider }]}>
                 <Text style={[styles.assigneeText, { color: palette.textSecondary }]}>
-                  👤 Assigned: {task.assignedToName || (task.assignedToNames ? task.assignedToNames.join(', ') : 'Ali Raza')}
+                  👤 Assigned: {task.assignedToName || (task.assignedToNames ? task.assignedToNames.join(', ') : 'Unassigned')}
                 </Text>
                 <View style={styles.footerRight}>
                   {task.isMilestoneSynced && (
