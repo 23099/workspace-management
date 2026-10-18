@@ -47,9 +47,20 @@ const AdminStackNavigator = () => {
 };
 
 const CustomAdminDrawerContent = (props) => {
-  const { currentUser, logout, quickDemoLogin } = useAuth();
+  const { currentUser, logout } = useAuth();
   const { getRolePalette } = useTheme();
   const palette = getRolePalette('ADMIN');
+
+  const navigateTo = (screenName) => {
+    try {
+      props.navigation.navigate('AdminStack', { screen: screenName });
+    } catch {
+      props.navigation.navigate(screenName);
+    }
+    if (props.navigation.closeDrawer) {
+      props.navigation.closeDrawer();
+    }
+  };
 
   const handleResetData = () => {
     Alert.alert(
@@ -69,16 +80,6 @@ const CustomAdminDrawerContent = (props) => {
     );
   };
 
-  const handleQuickSwitch = () => {
-    Alert.alert('Quick Switch Demo Role', 'Select profile to simulate:', [
-      { text: 'Sana Khan (HR Specialist)', onPress: () => quickDemoLogin('HR-104') },
-      { text: 'Bilal Ahmed (Engineering Manager)', onPress: () => quickDemoLogin('MGR-022') },
-      { text: 'Ali Raza (Software Engineer II)', onPress: () => quickDemoLogin('EMP-089') },
-      { text: 'Zafar Corp (Client Representative)', onPress: () => quickDemoLogin('CLT-501') },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
-
   const handleLogout = () => {
     Alert.alert('Log Out', 'Are you sure you want to log out of Admin portal?', [
       { text: 'Cancel', style: 'cancel' },
@@ -96,10 +97,10 @@ const CustomAdminDrawerContent = (props) => {
             style={styles.adminAvatar}
           />
           <Text style={[styles.adminName, { color: palette.textPrimary }]}>
-            Usman Tariq (ADMIN)
+            {currentUser?.name || 'Administrator'} (ADMIN)
           </Text>
           <Text style={[styles.adminEmail, { color: palette.textSecondary }]}>
-            {currentUser?.email || 'usman@acmetech.com'}
+            {currentUser?.email || 'admin@acmetech.com'}
           </Text>
 
           {/* React Navigation Drawer v6 badge */}
@@ -112,7 +113,7 @@ const CustomAdminDrawerContent = (props) => {
         <View style={styles.menuItemsList}>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => props.navigation.navigate('AdminDashboard')}
+            onPress={() => navigateTo('AdminDashboard')}
           >
             <Icon name="grid" size={18} color="#1E293B" />
             <Text style={[styles.menuItemText, { color: palette.textPrimary }]}>Executive Dashboard</Text>
@@ -120,7 +121,7 @@ const CustomAdminDrawerContent = (props) => {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => props.navigation.navigate('AnnouncementsFeed')}
+            onPress={() => navigateTo('AnnouncementsFeed')}
           >
             <Icon name="notifications" size={18} color="#1E293B" />
             <Text style={[styles.menuItemText, { color: palette.textPrimary }]}>Company Announcements</Text>
@@ -128,7 +129,7 @@ const CustomAdminDrawerContent = (props) => {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => props.navigation.navigate('Notifications')}
+            onPress={() => navigateTo('Notifications')}
           >
             <Icon name="chatbubble-ellipses" size={18} color="#1E293B" />
             <View style={styles.menuItemRow}>
@@ -141,7 +142,7 @@ const CustomAdminDrawerContent = (props) => {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => props.navigation.navigate('AdminProfile')}
+            onPress={() => navigateTo('AdminProfile')}
           >
             <Icon name="settings" size={18} color="#1E293B" />
             <Text style={[styles.menuItemText, { color: palette.textPrimary }]}>
@@ -150,13 +151,6 @@ const CustomAdminDrawerContent = (props) => {
           </TouchableOpacity>
 
           <View style={[styles.menuDivider, { backgroundColor: palette.divider }]} />
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleQuickSwitch}>
-            <Icon name="people" size={18} color="#2563EB" />
-            <Text style={[styles.menuItemText, { color: '#2563EB', fontWeight: '700' }]}>
-              Quick Switch Demo Role
-            </Text>
-          </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleResetData}>
             <Icon name="refresh" size={18} color="#D97706" />

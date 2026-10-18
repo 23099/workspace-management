@@ -18,12 +18,12 @@ import AppInput from '../../components/common/AppInput';
 import Icon from '../../components/common/Icon';
 import { isValidEmail, isValidPassword } from '../../utils/validation';
 
-export const LoginScreen = () => {
-  const { login, quickDemoLogin } = useAuth();
+export const LoginScreen = ({ navigation }) => {
+  const { login } = useAuth();
   const { isDark } = useTheme();
 
-  const [email, setEmail] = useState('usman@acmetech.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberDevice, setRememberDevice] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -56,53 +56,10 @@ export const LoginScreen = () => {
   const handleForgotPassword = () => {
     Alert.alert(
       'Password Recovery',
-      'For demo & security compliance, please contact your Company Administrator (Usman Tariq) or use the Quick Demo Role Switcher below.',
+      'For account password recovery, please contact your Company Administrator or create a new account below.',
       [{ text: 'OK' }]
     );
   };
-
-  const demoRoles = [
-    {
-      id: 'ADM-001',
-      name: 'Usman Tariq',
-      roleSubtitle: 'Company Admin (Full Access)',
-      image: IMAGES.dpAdminUsman,
-      badgeColor: '#1E293B',
-      role: 'ADMIN',
-    },
-    {
-      id: 'HR-104',
-      name: 'Sana Khan',
-      roleSubtitle: 'HR & Payroll Specialist',
-      image: IMAGES.dpHrSana,
-      badgeColor: '#0F766E',
-      role: 'HR',
-    },
-    {
-      id: 'MGR-022',
-      name: 'Bilal Ahmed',
-      roleSubtitle: 'Engineering Manager',
-      image: IMAGES.dpMgrBilal,
-      badgeColor: '#1D4ED8',
-      role: 'MANAGER',
-    },
-    {
-      id: 'EMP-089',
-      name: 'Ali Raza',
-      roleSubtitle: 'Software Engineer II',
-      image: IMAGES.dpEmpAli,
-      badgeColor: '#4338CA',
-      role: 'EMPLOYEE',
-    },
-    {
-      id: 'CLT-501',
-      name: 'Zafar Corp (Zafar Ahmed)',
-      roleSubtitle: 'Client Representative',
-      image: IMAGES.dpClientZafar,
-      badgeColor: '#92400E',
-      role: 'CLIENT',
-    },
-  ];
 
   return (
     <KeyboardAvoidingView
@@ -135,7 +92,7 @@ export const LoginScreen = () => {
         <View style={[styles.formCard, isDark && styles.formCardDark]}>
           <Text style={[styles.cardTitle, isDark && styles.textWhite]}>Sign In to Workspace</Text>
           <Text style={[styles.cardDesc, isDark && styles.textMuted]}>
-            Enter your enterprise credentials or use quick demo access
+            Enter your enterprise credentials to access your portal
           </Text>
 
           {Boolean(errorMessage) && (
@@ -212,41 +169,22 @@ export const LoginScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* OR Divider */}
-        <View style={styles.dividerRow}>
-          <View style={[styles.dividerLine, isDark && styles.dividerLineDark]} />
-          <Text style={[styles.dividerText, isDark && styles.textMuted]}>
-            OR QUICK DEMO ACCESS
+        {/* Register Account Card */}
+        <View style={[styles.registerCard, isDark && styles.registerCardDark]}>
+          <Text style={[styles.registerCardTitle, isDark && styles.textWhite]}>
+            Don't have an enterprise account?
           </Text>
-          <View style={[styles.dividerLine, isDark && styles.dividerLineDark]} />
-        </View>
-
-        {/* Quick Demo Switcher Card List */}
-        <View style={styles.demoListContainer}>
-          {demoRoles.map((demo) => (
-            <TouchableOpacity
-              key={demo.id}
-              style={[styles.demoCard, isDark && styles.demoCardDark]}
-              onPress={() => quickDemoLogin(demo.id)}
-              activeOpacity={0.8}
-            >
-              <Image source={demo.image} style={styles.demoAvatar} />
-              <View style={styles.demoInfo}>
-                <View style={styles.demoNameRow}>
-                  <Text style={[styles.demoName, isDark && styles.textWhite]}>{demo.name}</Text>
-                  <View style={[styles.roleTag, { backgroundColor: demo.badgeColor }]}>
-                    <Text style={styles.roleTagText}>{demo.role}</Text>
-                  </View>
-                </View>
-                <Text style={[styles.demoSub, isDark && styles.textMuted]}>
-                  {demo.roleSubtitle}
-                </Text>
-              </View>
-              <View style={styles.arrowIcon}>
-                <Icon name="chevron-forward" size={18} color={demo.badgeColor} />
-              </View>
-            </TouchableOpacity>
-          ))}
+          <Text style={[styles.registerCardDesc, isDark && styles.textMuted]}>
+            Register as an Administrator to set up your company workspace, departments, and workforce policies, or create a team account.
+          </Text>
+          <TouchableOpacity
+            style={styles.registerBtn}
+            onPress={() => navigation.navigate('Register')}
+            activeOpacity={0.8}
+          >
+            <Icon name="person-add" size={16} color="#1E293B" />
+            <Text style={styles.registerBtnText}>Create Admin / User Account</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -441,59 +379,49 @@ const styles = StyleSheet.create({
     color: '#64748B',
     letterSpacing: 0.8,
   },
-  demoListContainer: {
-    gap: 10,
-  },
-  demoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  registerCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 14,
+    padding: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    elevation: 1,
+    marginTop: 18,
+    alignItems: 'center',
+    elevation: 2,
   },
-  demoCardDark: {
+  registerCardDark: {
     backgroundColor: '#151D2A',
     borderColor: '#334155',
   },
-  demoAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
+  registerCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    textAlign: 'center',
   },
-  demoInfo: {
-    flex: 1,
+  registerCardDesc: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 14,
+    lineHeight: 18,
   },
-  demoNameRow: {
+  registerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    borderWidth: 1.5,
+    borderColor: '#1E293B',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#F1F5F9',
   },
-  demoName: {
-    fontSize: 14,
+  registerBtnText: {
+    fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
-  },
-  roleTag: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  roleTagText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  demoSub: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  arrowIcon: {
-    padding: 4,
+    color: '#1E293B',
   },
   textWhite: {
     color: '#F8FAFC',

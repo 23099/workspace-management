@@ -18,6 +18,8 @@ import AvatarPickerModal from '../../components/common/AvatarPickerModal';
 import Icon from '../../components/common/Icon';
 import { AVATAR_DP_PRESETS, getAvatarSource, IMAGES } from '../../assets/images';
 import { isValidEmail } from '../../utils/validation';
+import storageService, { STORAGE_KEYS } from '../../services/storageService';
+import { SEED_USERS } from '../../data/seedData';
 
 const SYSTEM_ROLES = [
   { id: 'EMPLOYEE', label: 'Employee', desc: 'Can submit leave, punch attendance, view salary & work tasks' },
@@ -88,11 +90,29 @@ export const EmployeeFormScreen = ({ navigation, route }) => {
 
     if (isEditing) {
       dispatch(updateUser(userPayload));
+      (async () => {
+        try {
+          const storedUsers = await storageService.getItem(STORAGE_KEYS.USERS, SEED_USERS);
+          const updatedUsers = storedUsers.map((u) => (u.id === userPayload.id ? { ...u, ...userPayload } : u));
+          await storageService.setItem(STORAGE_KEYS.USERS, updatedUsers);
+        } catch (err) {
+          console.warn('[EmployeeForm] Failed updating storage:', err);
+        }
+      })();
       Alert.alert('Success', `User record for "${name}" updated successfully.`, [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } else {
       dispatch(addUser(userPayload));
+      (async () => {
+        try {
+          const storedUsers = await storageService.getItem(STORAGE_KEYS.USERS, SEED_USERS);
+          const updatedUsers = [userPayload, ...storedUsers];
+          await storageService.setItem(STORAGE_KEYS.USERS, updatedUsers);
+        } catch (err) {
+          console.warn('[EmployeeForm] Failed persisting user to storage:', err);
+        }
+      })();
       Alert.alert('User Provisioned', `New user "${name}" created and provisioned.`, [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);

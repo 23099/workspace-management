@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DrawerActions } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getAvatarSource, IMAGES } from '../../assets/images';
@@ -16,7 +17,12 @@ export const HeaderBar = ({
   onProfilePress,
   statusText = 'ONLINE',
   statusColor = '#10B981',
+  isEmbedded = false,
 }) => {
+  if (isEmbedded) {
+    return null;
+  }
+
   const insets = useSafeAreaInsets();
   const { currentUser } = useAuth();
   const { getRolePalette } = useTheme();
@@ -96,7 +102,15 @@ export const HeaderBar = ({
         ) : isAdmin ? (
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={() => navigation && navigation.openDrawer && navigation.openDrawer()}
+            onPress={() => {
+              if (navigation) {
+                if (typeof navigation.openDrawer === 'function') {
+                  navigation.openDrawer();
+                } else if (typeof navigation.dispatch === 'function') {
+                  navigation.dispatch(DrawerActions.openDrawer());
+                }
+              }
+            }}
             accessibilityRole="button"
             accessibilityLabel="Open Navigation Drawer"
           >

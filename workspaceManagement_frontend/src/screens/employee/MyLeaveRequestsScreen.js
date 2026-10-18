@@ -24,7 +24,7 @@ const LEAVE_TYPES = [
   { id: 'Casual / Unpaid 3,500 PKR/day', label: 'Casual / Unpaid 3,500 PKR/day', isPaid: false },
 ];
 
-export const MyLeaveRequestsScreen = ({ navigation }) => {
+export const MyLeaveRequestsScreen = ({ navigation, isEmbedded = false }) => {
   const dispatch = useDispatch();
   const { currentUser } = useAuth();
   const { getRolePalette } = useTheme();
@@ -85,6 +85,7 @@ export const MyLeaveRequestsScreen = ({ navigation }) => {
         subtitle="Employee Self-Service"
         showBack
         navigation={navigation}
+        isEmbedded={isEmbedded}
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>

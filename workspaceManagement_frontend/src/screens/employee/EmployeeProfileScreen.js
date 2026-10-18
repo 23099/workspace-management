@@ -18,7 +18,7 @@ import Icon from '../../components/common/Icon';
 import { getAvatarSource } from '../../assets/images';
 
 export const EmployeeProfileScreen = ({ navigation }) => {
-  const { currentUser, updateCurrentUserDP, logout, quickDemoLogin } = useAuth();
+  const { currentUser, updateCurrentUserDP, logout } = useAuth();
   const { getRolePalette, isDark, toggleTheme } = useTheme();
   const palette = getRolePalette('EMPLOYEE');
 
@@ -29,16 +29,6 @@ export const EmployeeProfileScreen = ({ navigation }) => {
     Alert.alert('Terminate Session', 'Are you sure you want to log out of employee workspace?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Log Out', style: 'destructive', onPress: () => logout() },
-    ]);
-  };
-
-  const handleSwitchDemoRole = () => {
-    Alert.alert('Switch Demo Role', 'Select profile to simulate:', [
-      { text: 'Admin (Usman)', onPress: () => quickDemoLogin('ADM-001') },
-      { text: 'HR (Sana)', onPress: () => quickDemoLogin('HR-104') },
-      { text: 'Manager (Bilal)', onPress: () => quickDemoLogin('MGR-022') },
-      { text: 'Client (Zafar Corp)', onPress: () => quickDemoLogin('CLT-501') },
-      { text: 'Cancel', style: 'cancel' },
     ]);
   };
 
@@ -223,16 +213,8 @@ export const EmployeeProfileScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Switch Demo Role & Terminate Session */}
+        {/* Terminate Session */}
         <View style={styles.bottomActions}>
-          <TouchableOpacity
-            style={[styles.switchRoleBtn, { borderColor: palette.cardBorder }]}
-            onPress={handleSwitchDemoRole}
-          >
-            <Icon name="people" size={16} color={palette.primary} />
-            <Text style={[styles.switchRoleText, { color: palette.primary }]}>Quick Switch Demo Role</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
             <Icon name="log-out" size={16} color="#DC2626" />
             <Text style={styles.logoutBtnText}>Terminate Session / Log Out</Text>

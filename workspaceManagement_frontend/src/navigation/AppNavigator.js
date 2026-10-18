@@ -6,8 +6,9 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { IMAGES } from '../assets/images';
 
-// Auth Screen
+// Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
+import RegisterScreen from '../screens/auth/RegisterScreen';
 
 // Role Navigators
 import AdminDrawerNavigator from './AdminDrawerNavigator';
@@ -22,6 +23,7 @@ const AuthStack = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
     </Stack.Navigator>
   );
 };

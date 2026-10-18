@@ -64,18 +64,83 @@ export const AuthProvider = ({ children }) => {
     return { success: true, user };
   };
 
-  const quickDemoLogin = async (roleOrUserId) => {
+  const register = async ({
+    name,
+    email,
+    password,
+    role = 'ADMIN',
+    department = 'Executive Management',
+    title = 'Company Administrator',
+    phone = '+92 300 1234567',
+    location = 'HQ - Main Campus, Islamabad',
+    organization = 'Acme Tech Solutions',
+  }) => {
+    if (!name || !name.trim()) {
+      return { success: false, error: 'Full name is required' };
+    }
+    if (!isValidEmail(email)) {
+      return { success: false, error: 'Please enter a valid work email address' };
+    }
+    if (!isValidPassword(password)) {
+      return { success: false, error: '! Password must be at least 6 characters' };
+    }
+
     const storedUsers = await storageService.getItem(STORAGE_KEYS.USERS, SEED_USERS);
-    let target = storedUsers.find((u) => u.id === roleOrUserId || u.role === roleOrUserId);
-    if (!target) {
-      target = SEED_USERS.find((u) => u.id === roleOrUserId || u.role === roleOrUserId);
+    const existingUser = storedUsers.find(
+      (u) => u.email.toLowerCase() === email.toLowerCase().trim()
+    );
+    if (existingUser) {
+      return { success: false, error: 'An account with this email already exists' };
     }
-    if (target) {
-      setCurrentUser(target);
-      await storageService.setItem(STORAGE_KEYS.AUTH_CURRENT_USER, target);
-      return { success: true, user: target };
-    }
-    return { success: false, error: 'Demo user not found' };
+
+    const prefix =
+      role === 'ADMIN'
+        ? 'ADM'
+        : role === 'HR'
+        ? 'HR'
+        : role === 'MANAGER'
+        ? 'MGR'
+        : role === 'CLIENT'
+        ? 'CLT'
+        : 'EMP';
+    const randomSuffix = Math.floor(100 + Math.random() * 900);
+    const newId = `${prefix}-${randomSuffix}`;
+
+    const defaultAvatar =
+      role === 'ADMIN'
+        ? 'dpAdminUsman'
+        : role === 'HR'
+        ? 'dpHrSana'
+        : role === 'MANAGER'
+        ? 'dpMgrBilal'
+        : role === 'CLIENT'
+        ? 'dpClientZafar'
+        : 'dpEmpAli';
+
+    const newUser = {
+      id: newId,
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password,
+      role,
+      departmentId: role === 'HR' ? 'dept_hr' : 'dept_eng',
+      department: department || (role === 'HR' ? 'Human Resources' : 'Engineering'),
+      title: title || (role === 'ADMIN' ? 'Company Administrator' : `${role} Specialist`),
+      location: location || 'HQ - Main Office',
+      phone: phone || '+92 300 0000000',
+      organization: role === 'CLIENT' ? organization : undefined,
+      avatarKey: defaultAvatar,
+      isActive: true,
+      reportsTo: role === 'ADMIN' ? null : 'ADM-001',
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedUsers = [newUser, ...storedUsers];
+    await storageService.setItem(STORAGE_KEYS.USERS, updatedUsers);
+    setCurrentUser(newUser);
+    await storageService.setItem(STORAGE_KEYS.AUTH_CURRENT_USER, newUser);
+
+    return { success: true, user: newUser };
   };
 
   const updateCurrentUserDP = async (avatarUriOrKey) => {
@@ -123,7 +188,7 @@ export const AuthProvider = ({ children }) => {
         currentUser,
         isSplashLoading,
         login,
-        quickDemoLogin,
+        register,
         updateCurrentUserDP,
         updateAdminProfile,
         logout,

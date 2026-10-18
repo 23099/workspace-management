@@ -18,7 +18,7 @@ import Icon from '../../components/common/Icon';
 import { getAvatarSource } from '../../assets/images';
 
 export const HRProfileScreen = ({ navigation }) => {
-  const { currentUser, updateCurrentUserDP, logout, quickDemoLogin } = useAuth();
+  const { currentUser, updateCurrentUserDP, logout } = useAuth();
   const { getRolePalette, isDark, toggleTheme } = useTheme();
   const palette = getRolePalette('HR');
 
@@ -30,20 +30,6 @@ export const HRProfileScreen = ({ navigation }) => {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Log Out', style: 'destructive', onPress: () => logout() },
     ]);
-  };
-
-  const handleSwitchDemoRole = () => {
-    Alert.alert(
-      'Switch Demo Role',
-      'Choose a role to simulate:',
-      [
-        { text: 'Company Admin (Usman)', onPress: () => quickDemoLogin('ADM-001') },
-        { text: 'Manager (Bilal)', onPress: () => quickDemoLogin('MGR-022') },
-        { text: 'Employee (Ali Raza)', onPress: () => quickDemoLogin('EMP-089') },
-        { text: 'Client (Zafar Corp)', onPress: () => quickDemoLogin('CLT-501') },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
   };
 
   return (
@@ -201,15 +187,8 @@ export const HRProfileScreen = ({ navigation }) => {
         </View>
 
         {/* Demo Switcher & Logout */}
+        {/* Logout */}
         <View style={styles.bottomActions}>
-          <TouchableOpacity
-            style={[styles.switchRoleBtn, { borderColor: palette.cardBorder }]}
-            onPress={handleSwitchDemoRole}
-          >
-            <Icon name="people" size={16} color={palette.primary} />
-            <Text style={[styles.switchRoleText, { color: palette.primary }]}>Switch Demo Role</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.logoutBtn}
             onPress={handleLogout}

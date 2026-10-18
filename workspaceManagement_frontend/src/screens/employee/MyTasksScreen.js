@@ -25,7 +25,7 @@ const TASK_TABS = [
 const TASK_STATES = ['TO_DO', 'IN_PROGRESS', 'COMPLETED'];
 const QUICK_PERCENTS = [25, 50, 75, 100];
 
-export const MyTasksScreen = ({ navigation }) => {
+export const MyTasksScreen = ({ navigation, isEmbedded = false }) => {
   const dispatch = useDispatch();
   const { currentUser } = useAuth();
   const { getRolePalette } = useTheme();
@@ -107,6 +107,7 @@ export const MyTasksScreen = ({ navigation }) => {
         subtitle="Software Engineering"
         showBack
         navigation={navigation}
+        isEmbedded={isEmbedded}
       />
 
       {/* Tabs Row */}

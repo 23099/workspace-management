@@ -18,7 +18,7 @@ import DatePickerModal from '../../components/common/DatePickerModal';
 
 const CATEGORIES = ['Attendance Correction', 'Salary Issue', 'General Inquiry'];
 
-export const MyHRTicketsScreen = ({ navigation }) => {
+export const MyHRTicketsScreen = ({ navigation, isEmbedded = false }) => {
   const dispatch = useDispatch();
   const { currentUser } = useAuth();
   const { getRolePalette } = useTheme();
@@ -75,6 +75,7 @@ export const MyHRTicketsScreen = ({ navigation }) => {
         subtitle="Employee Inquiries"
         showBack
         navigation={navigation}
+        isEmbedded={isEmbedded}
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
