@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import HeaderBar from '../../components/common/HeaderBar';
@@ -6,10 +6,16 @@ import MyLeaveRequestsScreen from './MyLeaveRequestsScreen';
 import MyHRTicketsScreen from './MyHRTicketsScreen';
 import MyTasksScreen from './MyTasksScreen';
 
-export const WorkAndRequestsHubScreen = ({ navigation }) => {
+export const WorkAndRequestsHubScreen = ({ navigation, route }) => {
   const { getRolePalette } = useTheme();
   const palette = getRolePalette('EMPLOYEE');
   const [activeSegment, setActiveSegment] = useState('LEAVES'); // 'LEAVES' | 'TICKETS' | 'TASKS'
+
+  useEffect(() => {
+    if (route?.params?.initialTab) {
+      setActiveSegment(route.params.initialTab.toUpperCase());
+    }
+  }, [route?.params?.initialTab]);
 
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>

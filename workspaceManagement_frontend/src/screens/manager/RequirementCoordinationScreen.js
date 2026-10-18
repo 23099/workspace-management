@@ -20,8 +20,17 @@ import { useTheme } from '../../context/ThemeContext';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
 import Icon from '../../components/common/Icon';
+import DatePickerModal from '../../components/common/DatePickerModal';
 
 const LIFECYCLE_STATES = ['IN_PROGRESS', 'AWAITING_CLIENT', 'COMPLETED'];
+
+const CLIENT_ORGANIZATIONS = [
+  'Zafar Corp',
+  'Nexa Enterprises',
+  'Apex Global',
+  'Horizon Labs',
+  'PakTech Solutions',
+];
 
 export const RequirementCoordinationScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -29,19 +38,24 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
   const palette = getRolePalette('MANAGER');
 
   const { requirements } = useSelector((state) => state.requirements);
-  const activeReq = requirements[0] || {};
+  const [selectedReqId, setSelectedReqId] = useState(requirements[0]?.id || 'REQ-101');
+  const activeReq = requirements.find((r) => r.id === selectedReqId) || requirements[0] || {};
 
   // Collapsible Form for creating requirement
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDeadline, setNewDeadline] = useState('2026-11-20');
   const [newOrg, setNewOrg] = useState('Zafar Corp');
+  const [calendarVisible, setCalendarVisible] = useState(false);
 
   // Milestone input
   const [newMilestoneText, setNewMilestoneText] = useState('');
 
-  // Broadcast text
+  // Broadcast text and target
+  const [broadcastTargetReqId, setBroadcastTargetReqId] = useState(requirements[0]?.id || 'REQ-101');
   const [broadcastText, setBroadcastText] = useState('');
+
+  const targetReq = requirements.find((r) => r.id === broadcastTargetReqId) || activeReq;
 
   const handleCreateRequirement = () => {
     if (!newTitle.trim()) {
@@ -57,7 +71,7 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
     );
     setNewTitle('');
     setShowCreateForm(false);
-    Alert.alert('Requirement Created', 'New client contract requirement initialized.');
+    Alert.alert('Requirement Created', `New client requirement initialized for ${newOrg}.`);
   };
 
   const handleAddMilestone = () => {
@@ -67,16 +81,19 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
   };
 
   const handlePublishBroadcast = () => {
-    if (!broadcastText.trim() || !activeReq?.id) return;
+    if (!broadcastText.trim() || !targetReq?.id) return;
     dispatch(
       publishBroadcast({
-        reqId: activeReq.id,
+        reqId: targetReq.id,
         author: 'Bilal Ahmed (Engineering Manager)',
         content: broadcastText.trim(),
       })
     );
     setBroadcastText('');
-    Alert.alert('Broadcast Published', 'Update is now visible to client on their portal.');
+    Alert.alert(
+      'Broadcast Published',
+      `Update is now published for ${targetReq.organization} (${targetReq.code}) on their executive dashboard.`
+    );
   };
 
   return (
@@ -89,6 +106,36 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Client & Requirement Selector Pills */}
+        <View style={styles.selectorCard}>
+          <Text style={[styles.selectorLabel, { color: palette.textSecondary }]}>
+            Active Requirement & Client Scope:
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.reqPillsRow}>
+            {requirements.map((req) => {
+              const isSelected = req.id === activeReq.id;
+              return (
+                <TouchableOpacity
+                  key={req.id}
+                  style={[
+                    styles.reqPill,
+                    { borderColor: palette.cardBorder, backgroundColor: palette.card },
+                    isSelected && { borderColor: palette.primary, backgroundColor: palette.badge },
+                  ]}
+                  onPress={() => setSelectedReqId(req.id)}
+                >
+                  <Text style={[styles.reqPillCode, { color: isSelected ? palette.primary : palette.textPrimary }]}>
+                    {req.code}
+                  </Text>
+                  <Text style={[styles.reqPillOrg, { color: palette.textSecondary }]}>
+                    {req.organization}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
         {/* Collapsible "+ Create New Client Requirement" Form */}
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
           <TouchableOpacity
@@ -121,19 +168,48 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
                 placeholder="e.g. Acme Multi-Tenant Auth & Billing"
               />
 
-              <AppInput
-                label="Client Organization"
-                value={newOrg}
-                onChangeText={setNewOrg}
-                placeholder="Zafar Corp"
-              />
+              {/* Client Organization Dropdown / Preset Chips */}
+              <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+                Client Organization (Select from Directory)
+              </Text>
+              <View style={styles.orgChipsRow}>
+                {CLIENT_ORGANIZATIONS.map((org) => {
+                  const isSelected = newOrg === org;
+                  return (
+                    <TouchableOpacity
+                      key={org}
+                      style={[
+                        styles.orgChip,
+                        { borderColor: palette.cardBorder, backgroundColor: palette.background },
+                        isSelected && { borderColor: palette.primary, backgroundColor: palette.badge },
+                      ]}
+                      onPress={() => setNewOrg(org)}
+                    >
+                      <Text
+                        style={[
+                          styles.orgChipText,
+                          { color: isSelected ? palette.primary : palette.textPrimary },
+                          isSelected && { fontWeight: '700' },
+                        ]}
+                      >
+                        {org}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
-              <AppInput
-                label="Contractual Client Deadline"
-                value={newDeadline}
-                onChangeText={setNewDeadline}
-                placeholder="2026-11-20"
-              />
+              {/* Contract Deadline with Calendar Picker */}
+              <Text style={[styles.fieldLabel, { color: palette.textPrimary, marginTop: 10 }]}>
+                Contractual Client Deadline
+              </Text>
+              <TouchableOpacity
+                style={[styles.datePickerBtn, { backgroundColor: palette.background, borderColor: palette.inputBorder }]}
+                onPress={() => setCalendarVisible(true)}
+              >
+                <Icon name="calendar" size={16} color={palette.primary} />
+                <Text style={[styles.datePickerBtnText, { color: palette.textPrimary }]}>{newDeadline}</Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.submitCreateBtn, { backgroundColor: palette.primary }]}
@@ -144,6 +220,15 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
             </View>
           )}
         </View>
+
+        {/* DatePickerModal for contract deadline */}
+        <DatePickerModal
+          visible={calendarVisible}
+          onClose={() => setCalendarVisible(false)}
+          initialDate={newDeadline}
+          title="Select Contractual Client Deadline"
+          onSelectDate={(newDate) => setNewDeadline(newDate)}
+        />
 
         {/* Active Requirement Card */}
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
@@ -274,13 +359,41 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
             Publish Client-Visible Progress Update
           </Text>
           <Text style={[styles.privacyDesc, { color: palette.textSecondary }]}>
-            Broadcast official milestone commentary to Zafar Corp executive dashboard.
+            Select recipient client organization and broadcast official milestone commentary directly to their executive dashboard.
           </Text>
+
+          {/* Client Recipient Selector */}
+          <Text style={[styles.fieldLabel, { color: palette.textPrimary, marginTop: 8 }]}>
+            Select Target Client Organization:
+          </Text>
+          <View style={styles.broadcastTargetChips}>
+            {requirements.map((req) => {
+              const isTarget = req.id === targetReq.id;
+              return (
+                <TouchableOpacity
+                  key={req.id}
+                  style={[
+                    styles.targetChip,
+                    { borderColor: palette.cardBorder, backgroundColor: palette.background },
+                    isTarget && { borderColor: palette.primary, backgroundColor: palette.badge },
+                  ]}
+                  onPress={() => setBroadcastTargetReqId(req.id)}
+                >
+                  <Text style={[styles.targetChipTitle, { color: isTarget ? palette.primary : palette.textPrimary }]}>
+                    {req.organization}
+                  </Text>
+                  <Text style={[styles.targetChipSub, { color: palette.textSecondary }]}>
+                    {req.code}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
           <TextInput
             value={broadcastText}
             onChangeText={setBroadcastText}
-            placeholder="e.g. Gateway regression tests completed. Preparing production build..."
+            placeholder={`Draft progress broadcast for ${targetReq.organization}...`}
             placeholderTextColor="#94A3B8"
             multiline
             numberOfLines={3}
@@ -292,7 +405,7 @@ export const RequirementCoordinationScreen = ({ navigation }) => {
             onPress={handlePublishBroadcast}
           >
             <Icon name="chatbubble-ellipses" size={15} color="#FFFFFF" />
-            <Text style={styles.publishBtnText}>Publish Broadcast</Text>
+            <Text style={styles.publishBtnText}>Publish Broadcast to {targetReq.organization}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -500,6 +613,91 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+  },
+  selectorCard: {
+    marginBottom: 12,
+  },
+  selectorLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  reqPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  reqPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  reqPillCode: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  reqPillOrg: {
+    fontSize: 10,
+    marginTop: 1,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  orgChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 10,
+  },
+  orgChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  orgChipText: {
+    fontSize: 11,
+  },
+  datePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 8,
+    marginBottom: 14,
+  },
+  datePickerBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  broadcastTargetChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 10,
+  },
+  targetChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 4,
+  },
+  targetChipTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  targetChipSub: {
+    fontSize: 10,
   },
 });
 

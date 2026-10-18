@@ -78,8 +78,15 @@ export const SalaryConfigScreen = ({ navigation }) => {
   const palette = getRolePalette('HR');
 
   const { companyWide, overrides } = useSelector((state) => state.salary);
+  const { users } = useSelector((state) => state.users);
   const [activeScope, setActiveScope] = useState('COMPANY'); // 'COMPANY' | 'OVERRIDE'
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('EMP-089'); // Ali Raza
+
+  const eligibleEmployees = (users || []).filter(
+    (u) => u.role === 'EMPLOYEE' || u.role === 'MANAGER'
+  );
+  const selectedEmployee =
+    eligibleEmployees.find((u) => u.id === selectedEmployeeId) || eligibleEmployees[0];
 
   // Syllabus requirement: useReducer
   const [state, dispatch] = useReducer(salaryReducer, initialSalaryState);
@@ -91,12 +98,24 @@ export const SalaryConfigScreen = ({ navigation }) => {
     isValidNumber(state.deductionPerAbsentDay) &&
     isValidNumber(state.deductionPerUnpaidLeaveDay);
 
+  const handleSelectEmployee = (emp) => {
+    setSelectedEmployeeId(emp.id);
+    const empConfig = overrides[emp.id] || {
+      ...companyWide,
+      baseSalary: emp.baseSalary || companyWide.baseSalary || 150000,
+    };
+    dispatch({ type: 'LOAD_CONFIG', payload: empConfig });
+  };
+
   const handleScopeChange = (scope) => {
     setActiveScope(scope);
     if (scope === 'COMPANY') {
       dispatch({ type: 'LOAD_CONFIG', payload: companyWide });
     } else {
-      const empConfig = overrides[selectedEmployeeId] || companyWide;
+      const empConfig = overrides[selectedEmployeeId] || {
+        ...companyWide,
+        baseSalary: selectedEmployee?.baseSalary || 150000,
+      };
       dispatch({ type: 'LOAD_CONFIG', payload: empConfig });
     }
   };
@@ -127,7 +146,7 @@ export const SalaryConfigScreen = ({ navigation }) => {
       Alert.alert('Saved', 'Company-wide default salary policies updated.');
     } else {
       reduxDispatch(updateEmployeeSalaryOverride({ userId: selectedEmployeeId, config: payload }));
-      Alert.alert('Saved', 'Employee custom salary override updated for Ali Raza.');
+      Alert.alert('Saved', `Employee custom salary override updated for ${selectedEmployee?.name || 'employee'}.`);
     }
   };
 
@@ -135,7 +154,7 @@ export const SalaryConfigScreen = ({ navigation }) => {
     <View style={[styles.container, { backgroundColor: palette.background }]}>
       <HeaderBar
         title="HR Salary & Custom Deduction"
-        subtitle="useReducer State"
+        subtitle="Policy & Compensation Control"
         showBack
         navigation={navigation}
       />
@@ -173,12 +192,52 @@ export const SalaryConfigScreen = ({ navigation }) => {
                 activeScope === 'OVERRIDE' ? { color: '#FFFFFF' } : { color: palette.textSecondary },
               ]}
             >
-              Employee Override (Ali Raza)
+              Employee Override ({selectedEmployee?.name?.split(' ')[0] || 'Individual'})
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Configuration Card */}
+        {/* Employee Selector when in OVERRIDE mode */}
+        {activeScope === 'OVERRIDE' && (
+          <View style={[styles.employeeSelectorCard, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
+            <View style={styles.selectorHeaderRow}>
+              <Icon name="people" size={16} color={palette.primary} />
+              <Text style={[styles.selectorTitle, { color: palette.textPrimary }]}>
+                Select Employee to Configure Overrides:
+              </Text>
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.empChipsScroll}>
+              {eligibleEmployees.map((emp) => {
+                const isSelected = emp.id === selectedEmployeeId;
+                return (
+                  <TouchableOpacity
+                    key={emp.id}
+                    style={[
+                      styles.empChip,
+                      { borderColor: isSelected ? palette.primary : palette.cardBorder },
+                      isSelected && { backgroundColor: palette.badge, borderWidth: 1.5 },
+                    ]}
+                    onPress={() => handleSelectEmployee(emp)}
+                  >
+                    <View style={styles.empChipTop}>
+                      <Text style={[styles.empChipName, { color: palette.textPrimary, fontWeight: isSelected ? '800' : '600' }]}>
+                        {emp.name}
+                      </Text>
+                      {isSelected && <Icon name="checkmark-circle" size={14} color={palette.primary} />}
+                    </View>
+                    <Text style={[styles.empChipSub, { color: palette.textSecondary }]}>
+                      {emp.id} • {emp.department}
+                    </Text>
+                    <Text style={[styles.empChipSalary, { color: palette.primary }]}>
+                      Base: PKR {Number(emp.baseSalary || 150000).toLocaleString()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
           <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>
             Base Earning & Pro-Rata Parameters
@@ -422,6 +481,50 @@ const styles = StyleSheet.create({
   saveBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: '700',
+  },
+  employeeSelectorCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 16,
+  },
+  selectorHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  selectorTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  empChipsScroll: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  empChip: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    minWidth: 160,
+    backgroundColor: '#F8FAFC',
+  },
+  empChipTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 3,
+  },
+  empChipName: {
+    fontSize: 13,
+  },
+  empChipSub: {
+    fontSize: 10,
+    marginBottom: 4,
+  },
+  empChipSalary: {
+    fontSize: 11,
     fontWeight: '700',
   },
 });

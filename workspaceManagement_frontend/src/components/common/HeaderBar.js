@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getAvatarSource, IMAGES } from '../../assets/images';
@@ -16,6 +17,7 @@ export const HeaderBar = ({
   statusText = 'ONLINE',
   statusColor = '#10B981',
 }) => {
+  const insets = useSafeAreaInsets();
   const { currentUser } = useAuth();
   const { getRolePalette } = useTheme();
   const role = currentUser?.role || 'EMPLOYEE';
@@ -68,7 +70,19 @@ export const HeaderBar = ({
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.surface, borderBottomColor: palette.cardBorder }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: palette.surface,
+          borderBottomColor: palette.cardBorder,
+          paddingTop: Math.max(insets.top, 12),
+          height: 60 + Math.max(insets.top, 12),
+          borderTopWidth: 3,
+          borderTopColor: palette.primary,
+        },
+      ]}
+    >
       <View style={styles.leftRow}>
         {showBack ? (
           <TouchableOpacity
@@ -117,24 +131,25 @@ export const HeaderBar = ({
       </View>
 
       <View style={styles.rightRow}>
-        {/* Render the React.createElement syllabus status pill */}
-        {statusPill}
-
         {rightAction ? (
           rightAction
-        ) : (
-          <TouchableOpacity
-            style={[styles.avatarButton, { borderColor: palette.primary }]}
-            onPress={handleAvatarPress}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel="View Profile"
-          >
-            <Image
-              source={getAvatarSource(currentUser?.avatarKey || currentUser?.avatarCustomUri)}
-              style={styles.avatarImage}
-            />
-          </TouchableOpacity>
+        ) : showBack ? null : (
+          <>
+            {/* Render the React.createElement syllabus status pill only on main screens */}
+            {statusPill}
+            <TouchableOpacity
+              style={[styles.avatarButton, { borderColor: palette.primary }]}
+              onPress={handleAvatarPress}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="View Profile"
+            >
+              <Image
+                source={getAvatarSource(currentUser?.avatarKey || currentUser?.avatarCustomUri)}
+                style={styles.avatarImage}
+              />
+            </TouchableOpacity>
+          </>
         )}
       </View>
     </View>

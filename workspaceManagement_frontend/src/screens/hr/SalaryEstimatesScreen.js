@@ -14,6 +14,13 @@ import HeaderBar from '../../components/common/HeaderBar';
 import Icon from '../../components/common/Icon';
 import { calculateSalaryEstimate, formatCurrency } from '../../utils/salaryCalculator';
 
+const PAYROLL_MONTHS = [
+  { id: '2026-10', label: 'October 2026', tag: 'Ongoing', isCurrent: true, totalPayroll: 436500 },
+  { id: '2026-09', label: 'September 2026', tag: 'Disbursed', isCurrent: false, totalPayroll: 450000 },
+  { id: '2026-08', label: 'August 2026', tag: 'Disbursed', isCurrent: false, totalPayroll: 445000 },
+  { id: '2026-07', label: 'July 2026', tag: 'Disbursed', isCurrent: false, totalPayroll: 442000 },
+];
+
 export const SalaryEstimatesScreen = ({ navigation }) => {
   const { getRolePalette } = useTheme();
   const palette = getRolePalette('HR');
@@ -23,8 +30,10 @@ export const SalaryEstimatesScreen = ({ navigation }) => {
 
   const [selectedUserId, setSelectedUserId] = useState('EMP-089'); // Ali Raza
   const [isCalculating, setIsCalculating] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState('October 2026');
+  const [selectedMonthId, setSelectedMonthId] = useState('2026-10');
 
+  const activeMonth =
+    PAYROLL_MONTHS.find((m) => m.id === selectedMonthId) || PAYROLL_MONTHS[0];
   const selectedUser = users.find((u) => u.id === selectedUserId) || users[0];
 
   // Specific attendance values for Ali Raza as specified in blueprint
@@ -46,46 +55,132 @@ export const SalaryEstimatesScreen = ({ navigation }) => {
     });
   }, []);
 
-  // Compute breakdown for currently selected user
+  // Compute breakdown for currently selected user and active month
   const currentBreakdown = useMemo(() => {
-    if (selectedUser?.id === 'EMP-089') {
-      return aliBreakdown;
+    const base = selectedUser?.baseSalary || 150000;
+    if (selectedMonthId === '2026-10') {
+      if (selectedUser?.id === 'EMP-089') {
+        return aliBreakdown;
+      }
+      return calculateSalaryEstimate({
+        baseSalary: base,
+        workingDaysPerPeriod: 22,
+        presentDays: 21,
+        paidLeaveDays: 1,
+        unpaidLeaveDays: 0,
+        absentDays: 0,
+        deductionPerAbsentDay: 5000,
+        deductionPerUnpaidLeaveDay: 3500,
+        allowances: 20000,
+      });
     }
-    const base = selectedUser?.baseSalary || 140000;
+
+    // Historical months (Disbursed records)
+    let present = 22;
+    let paidLeave = 0;
+    if (selectedMonthId === '2026-08') {
+      present = 21;
+      paidLeave = 1;
+    } else if (selectedMonthId === '2026-07') {
+      present = 20;
+      paidLeave = 2;
+    }
+
     return calculateSalaryEstimate({
       baseSalary: base,
       workingDaysPerPeriod: 22,
-      presentDays: 21,
-      paidLeaveDays: 1,
+      presentDays: present,
+      paidLeaveDays: paidLeave,
       unpaidLeaveDays: 0,
       absentDays: 0,
       deductionPerAbsentDay: 5000,
       deductionPerUnpaidLeaveDay: 3500,
       allowances: 20000,
     });
-  }, [selectedUser, aliBreakdown]);
+  }, [selectedUser, selectedMonthId, aliBreakdown]);
 
-  // Compute total company estimated payroll (matches 436,500 PKR from blueprint)
-  const totalCompanyPayroll = useMemo(() => {
-    return 436500;
-  }, []);
+  // Compute total company estimated payroll for selected month
+  const totalCompanyPayroll = activeMonth.totalPayroll;
 
   const handleRecalculateAll = () => {
     setIsCalculating(true);
     setTimeout(() => {
       setIsCalculating(false);
-      Alert.alert('Recalculation Complete', 'All 24 workforce salary estimates synchronized.');
-    }, 600);
+      Alert.alert(
+        'Payroll Synchronized',
+        `All 24 workforce salary records recalculated for ${activeMonth.label}.`
+      );
+    }, 500);
+  };
+
+  const getEmployeeMonthPayout = (emp) => {
+    const base = emp.baseSalary || 150000;
+    if (selectedMonthId === '2026-10') {
+      if (emp.id === 'EMP-089') return 161500;
+      return base + 20000;
+    }
+    return base + 20000;
   };
 
   // Syllabus Requirement: Featured Audit as ListHeaderComponent
   const renderListHeader = () => (
     <View style={styles.headerContainer}>
-      {/* Month & Recalculate Bar */}
+      {/* Historical Month Selector Strip */}
+      <View style={styles.monthSelectorWrap}>
+        <Text style={[styles.monthSelectorLabel, { color: palette.textSecondary }]}>
+          Payroll Billing Cycle:
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthChipsScroll}>
+          {PAYROLL_MONTHS.map((m) => {
+            const isSelected = m.id === selectedMonthId;
+            return (
+              <TouchableOpacity
+                key={m.id}
+                style={[
+                  styles.monthChip,
+                  { borderColor: isSelected ? palette.primary : palette.cardBorder },
+                  isSelected ? { backgroundColor: palette.primary } : { backgroundColor: palette.card },
+                ]}
+                onPress={() => setSelectedMonthId(m.id)}
+              >
+                <Text
+                  style={[
+                    styles.monthChipText,
+                    isSelected ? { color: '#FFFFFF' } : { color: palette.textPrimary },
+                  ]}
+                >
+                  {m.label}
+                </Text>
+                <View
+                  style={[
+                    styles.monthTagPill,
+                    m.isCurrent
+                      ? { backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#FEF3C7' }
+                      : { backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#DCFCE7' },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.monthTagText,
+                      isSelected
+                        ? { color: '#FFFFFF' }
+                        : { color: m.isCurrent ? '#B45309' : '#16A34A' },
+                    ]}
+                  >
+                    {m.tag}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Control Bar */}
       <View style={[styles.controlRow, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
         <View style={styles.monthBadge}>
           <Icon name="calendar" size={16} color={palette.primary} />
-          <Text style={[styles.monthText, { color: palette.textPrimary }]}>{selectedMonth}</Text>
+          <Text style={[styles.monthText, { color: palette.textPrimary }]}>{activeMonth.label} Cycle</Text>
         </View>
 
         <TouchableOpacity
@@ -98,7 +193,9 @@ export const SalaryEstimatesScreen = ({ navigation }) => {
           ) : (
             <View style={styles.recalcBtnContent}>
               <Icon name="refresh" size={14} color="#FFFFFF" />
-              <Text style={styles.recalcText}>Recalculate All</Text>
+              <Text style={styles.recalcText}>
+                {activeMonth.isCurrent ? 'Recalculate All' : 'Re-verify Audit'}
+              </Text>
             </View>
           )}
         </TouchableOpacity>
@@ -107,8 +204,22 @@ export const SalaryEstimatesScreen = ({ navigation }) => {
       {/* Featured Audit Card for selected user */}
       <View style={[styles.featuredAuditCard, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
         <View style={styles.featuredBadgeRow}>
-          <View style={[styles.auditTag, { backgroundColor: palette.badge }]}>
-            <Text style={[styles.auditTagText, { color: palette.text }]}>FEATURED AUDIT • OCTOBER 2026</Text>
+          <View
+            style={[
+              styles.auditTag,
+              { backgroundColor: activeMonth.isCurrent ? palette.badge : '#DCFCE7' },
+            ]}
+          >
+            <Text
+              style={[
+                styles.auditTagText,
+                { color: activeMonth.isCurrent ? palette.text : '#16A34A' },
+              ]}
+            >
+              {activeMonth.isCurrent
+                ? 'FEATURED AUDIT • OCTOBER 2026'
+                : `HISTORICAL AUDIT • ${activeMonth.label.toUpperCase()} (${activeMonth.tag.toUpperCase()})`}
+            </Text>
           </View>
           <Text style={[styles.empIdTag, { color: palette.textSecondary }]}>
             {selectedUser?.id}
@@ -189,19 +300,41 @@ export const SalaryEstimatesScreen = ({ navigation }) => {
         <View style={styles.cardActionsRow}>
           <TouchableOpacity
             style={[styles.outlineBtn, { borderColor: palette.primary }]}
-            onPress={() => Alert.alert('Export PDF', `Payslip PDF exported for ${selectedUser?.name}.`)}
+            onPress={() =>
+              Alert.alert(
+                'Export PDF',
+                `Official Payslip PDF exported for ${selectedUser?.name} (${activeMonth.label}).`
+              )
+            }
           >
             <Icon name="document-text" size={14} color={palette.primary} />
             <Text style={[styles.outlineBtnText, { color: palette.primary }]}>Export PDF</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.lockBtn, { backgroundColor: palette.primary }]}
-            onPress={() => Alert.alert('Locked', `Salary estimate locked for approval.`)}
-          >
-            <Icon name="lock-closed" size={14} color="#FFFFFF" />
-            <Text style={styles.lockBtnText}>Lock Approval</Text>
-          </TouchableOpacity>
+          {activeMonth.isCurrent ? (
+            <TouchableOpacity
+              style={[styles.lockBtn, { backgroundColor: palette.primary }]}
+              onPress={() => Alert.alert('Locked', `Salary estimate locked for approval.`)}
+            >
+              <Icon name="lock-closed" size={14} color="#FFFFFF" />
+              <Text style={styles.lockBtnText}>Lock Approval</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.lockBtn, { backgroundColor: '#16A34A' }]}
+              onPress={() =>
+                Alert.alert(
+                  'Disbursed Record',
+                  `Payment of ${formatCurrency(
+                    currentBreakdown.netSalary
+                  )} was disbursed to ${selectedUser?.name} on ${activeMonth.label}.`
+                )
+              }
+            >
+              <Icon name="checkmark-circle" size={14} color="#FFFFFF" />
+              <Text style={styles.lockBtnText}>Disbursed Record</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -216,8 +349,12 @@ export const SalaryEstimatesScreen = ({ navigation }) => {
     <View style={[styles.totalPayrollFooter, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
       <View style={styles.footerRow}>
         <View>
-          <Text style={[styles.footerTitle, { color: palette.textPrimary }]}>Total Company Estimated Payroll</Text>
-          <Text style={[styles.footerSubtitle, { color: palette.textSecondary }]}>Cycle: October 2026 • 24 Headcount</Text>
+          <Text style={[styles.footerTitle, { color: palette.textPrimary }]}>
+            Total Company {activeMonth.isCurrent ? 'Estimated' : 'Disbursed'} Payroll
+          </Text>
+          <Text style={[styles.footerSubtitle, { color: palette.textSecondary }]}>
+            Cycle: {activeMonth.label} • 24 Headcount • {activeMonth.isCurrent ? 'Projected' : 'Disbursed'}
+          </Text>
         </View>
         <Text style={[styles.footerAmount, { color: palette.primary }]}>
           {formatCurrency(totalCompanyPayroll)}
@@ -230,6 +367,7 @@ export const SalaryEstimatesScreen = ({ navigation }) => {
 
   const renderItem = ({ item }) => {
     const isSelected = item.id === selectedUserId;
+    const payout = getEmployeeMonthPayout(item);
     return (
       <TouchableOpacity
         style={[
@@ -246,9 +384,14 @@ export const SalaryEstimatesScreen = ({ navigation }) => {
           </Text>
         </View>
         <View style={styles.queueRight}>
-          <Text style={[styles.queuePayout, { color: palette.primary }]}>
-            {formatCurrency(item.baseSalary || 150000)}
-          </Text>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={[styles.queuePayout, { color: palette.primary }]}>
+              {formatCurrency(payout)}
+            </Text>
+            <Text style={[styles.itemMonthStatus, { color: activeMonth.isCurrent ? '#B45309' : '#16A34A' }]}>
+              {activeMonth.isCurrent ? 'Estimate' : 'Disbursed'}
+            </Text>
+          </View>
           <Icon name="chevron-forward" size={16} color="#94A3B8" />
         </View>
       </TouchableOpacity>
@@ -499,6 +642,45 @@ const styles = StyleSheet.create({
   footerAmount: {
     fontSize: 18,
     fontWeight: '900',
+  },
+  monthSelectorWrap: {
+    marginBottom: 12,
+  },
+  monthSelectorLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  monthChipsScroll: {
+    gap: 8,
+    paddingVertical: 2,
+  },
+  monthChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    gap: 8,
+  },
+  monthChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  monthTagPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  monthTagText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  itemMonthStatus: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 1,
   },
 });
 

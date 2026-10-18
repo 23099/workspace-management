@@ -14,6 +14,7 @@ import { useTheme } from '../../context/ThemeContext';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
 import Icon from '../../components/common/Icon';
+import DatePickerModal from '../../components/common/DatePickerModal';
 
 const CATEGORIES = ['Attendance Correction', 'Salary Issue', 'General Inquiry'];
 
@@ -31,6 +32,7 @@ export const MyHRTicketsScreen = ({ navigation }) => {
   const [category, setCategory] = useState('Attendance Correction');
   const [subject, setSubject] = useState('Forgot to check out on Oct 12');
   const [targetDate, setTargetDate] = useState('2026-10-12');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [requestedIn, setRequestedIn] = useState('09:02 AM');
   const [requestedOut, setRequestedOut] = useState('05:15 PM');
   const [explanation, setExplanation] = useState(
@@ -118,12 +120,21 @@ export const MyHRTicketsScreen = ({ navigation }) => {
                 </Text>
               </View>
 
-              <AppInput
-                label="Target Work Date"
-                value={targetDate}
-                onChangeText={setTargetDate}
-                placeholder="2026-10-12"
-              />
+              <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+                Target Work Date
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.datePickerBtn,
+                  { backgroundColor: palette.surface, borderColor: palette.inputBorder },
+                ]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Icon name="calendar" size={16} color={palette.primary} />
+                <Text style={[styles.datePickerBtnText, { color: palette.textPrimary }]}>
+                  {targetDate || 'Select Date from Calendar'}
+                </Text>
+              </TouchableOpacity>
 
               <View style={styles.timeRow}>
                 <View style={{ flex: 1, marginRight: 8 }}>
@@ -226,6 +237,14 @@ export const MyHRTicketsScreen = ({ navigation }) => {
           </View>
         ))}
       </ScrollView>
+
+      <DatePickerModal
+        visible={showDatePicker}
+        selectedDate={targetDate}
+        onSelectDate={(date) => setTargetDate(date)}
+        onClose={() => setShowDatePicker(false)}
+        title="Select Target Work Date"
+      />
     </View>
   );
 };
@@ -381,6 +400,25 @@ const styles = StyleSheet.create({
   overrideSyncText: {
     fontSize: 11,
     color: '#0F766E',
+    fontWeight: '600',
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  datePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  datePickerBtnText: {
+    fontSize: 13,
     fontWeight: '600',
   },
 });

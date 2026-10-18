@@ -13,12 +13,7 @@ import { useTheme } from '../../context/ThemeContext';
 import HeaderBar from '../../components/common/HeaderBar';
 import Icon from '../../components/common/Icon';
 
-const FILTER_PILLS = [
-  { id: 'ALL', label: 'All', count: 10 },
-  { id: 'PRESENT', label: 'Present', count: 8 },
-  { id: 'LEAVE', label: 'On Leave', count: 2 },
-  { id: 'ABSENT', label: 'Absent', count: 0 },
-];
+import DatePickerModal from '../../components/common/DatePickerModal';
 
 export const TeamAttendanceScreen = ({ navigation }) => {
   const { currentUser } = useAuth();
@@ -28,8 +23,9 @@ export const TeamAttendanceScreen = ({ navigation }) => {
   const { users } = useSelector((state) => state.users);
   const { logs } = useSelector((state) => state.attendance);
 
-  const [currentDate, setCurrentDate] = useState('Oct 15, 2026');
+  const [selectedDate, setSelectedDate] = useState('2026-10-18');
   const [activeFilter, setActiveFilter] = useState('ALL');
+  const [calendarVisible, setCalendarVisible] = useState(false);
 
   // Filter strictly to direct reports where managerId matches or reports to Bilal
   const myTeam = useMemo(() => {
@@ -42,12 +38,20 @@ export const TeamAttendanceScreen = ({ navigation }) => {
     );
   }, [users, currentUser]);
 
-  const sections = useMemo(() => {
-    const presentTeam = myTeam.slice(0, 8);
-    const onLeaveTeam = myTeam.slice(8, 10);
+  const presentTeam = useMemo(() => myTeam.slice(0, 6), [myTeam]);
+  const onLeaveTeam = useMemo(() => myTeam.slice(6, 8), [myTeam]);
+  const absentTeam = useMemo(() => myTeam.slice(8), [myTeam]);
 
+  const filterPills = [
+    { id: 'ALL', label: 'All', count: myTeam.length },
+    { id: 'PRESENT', label: 'Present', count: presentTeam.length },
+    { id: 'LEAVE', label: 'On Leave', count: onLeaveTeam.length },
+    { id: 'ABSENT', label: 'Absent', count: absentTeam.length },
+  ];
+
+  const sections = useMemo(() => {
     const res = [];
-    if (presentTeam.length > 0) {
+    if ((activeFilter === 'ALL' || activeFilter === 'PRESENT') && presentTeam.length > 0) {
       res.push({
         title: `CHECKED-IN & ACTIVE (${presentTeam.length})`,
         data: presentTeam.map((u, i) => ({
@@ -61,7 +65,7 @@ export const TeamAttendanceScreen = ({ navigation }) => {
         accent: '#16A34A',
       });
     }
-    if (onLeaveTeam.length > 0) {
+    if ((activeFilter === 'ALL' || activeFilter === 'LEAVE') && onLeaveTeam.length > 0) {
       res.push({
         title: `ON APPROVED LEAVE (${onLeaveTeam.length})`,
         data: onLeaveTeam.map((u) => ({
@@ -75,16 +79,40 @@ export const TeamAttendanceScreen = ({ navigation }) => {
         accent: '#2563EB',
       });
     }
+    if ((activeFilter === 'ALL' || activeFilter === 'ABSENT') && absentTeam.length > 0) {
+      res.push({
+        title: `UNEXCUSED ABSENT (${absentTeam.length})`,
+        data: absentTeam.map((u) => ({
+          id: u.id,
+          name: u.name,
+          title: u.title,
+          checkIn: 'No Punch Recorded',
+          status: 'ABSENT',
+          distance: '520m Out of Bounds',
+        })),
+        accent: '#DC2626',
+      });
+    }
     return res;
-  }, [myTeam]);
+  }, [presentTeam, onLeaveTeam, absentTeam, activeFilter]);
 
   const handleExportReport = () => {
     Alert.alert(
       'Export Daily Team Attendance Report',
-      'Attendance summary CSV/PDF has been compiled for Bilal Ahmed engineering squad.',
+      `Attendance summary CSV/PDF for ${selectedDate} has been compiled for Bilal Ahmed engineering squad.`,
       [{ text: 'OK' }]
     );
   };
+
+  const formattedDisplayDate = useMemo(() => {
+    if (selectedDate === '2026-10-18') return 'Oct 18, 2026 (Today)';
+    const p = selectedDate.split('-');
+    if (p.length === 3) {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${months[parseInt(p[1], 10) - 1]} ${parseInt(p[2], 10)}, ${p[0]}`;
+    }
+    return selectedDate;
+  }, [selectedDate]);
 
   const renderItem = ({ item }) => (
     <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
@@ -132,21 +160,36 @@ export const TeamAttendanceScreen = ({ navigation }) => {
         navigation={navigation}
       />
 
-      {/* Date Stepper */}
+      {/* Date Stepper with Calendar Launcher */}
       <View style={[styles.dateBar, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
-        <TouchableOpacity onPress={() => setCurrentDate('Oct 14, 2026')}>
+        <TouchableOpacity
+          onPress={() => setSelectedDate('2026-10-17')}
+          accessibilityLabel="Previous Day"
+        >
           <Text style={styles.stepperArrow}>&lt;</Text>
         </TouchableOpacity>
-        <View style={styles.dateRow}>
+
+        <TouchableOpacity
+          style={styles.dateRow}
+          onPress={() => setCalendarVisible(true)}
+          activeOpacity={0.7}
+          accessibilityLabel="Open Calendar Date Picker"
+        >
           <Icon name="calendar" size={16} color={palette.primary} />
-          <Text style={[styles.dateText, { color: palette.textPrimary }]}>{currentDate}</Text>
-        </View>
-        <TouchableOpacity onPress={() => setCurrentDate('Oct 15, 2026')}>
+          <Text style={[styles.dateText, { color: palette.textPrimary }]}>{formattedDisplayDate}</Text>
+          <Icon name="chevron-down" size={14} color={palette.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setSelectedDate('2026-10-19')}
+          accessibilityLabel="Next Day"
+        >
           <Text style={styles.stepperArrow}>&gt;</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.todayTag, { backgroundColor: palette.primary }]}
-          onPress={() => setCurrentDate('Oct 15, 2026')}
+          onPress={() => setSelectedDate('2026-10-18')}
         >
           <Text style={styles.todayTagText}>Today</Text>
         </TouchableOpacity>
@@ -154,7 +197,7 @@ export const TeamAttendanceScreen = ({ navigation }) => {
 
       {/* Filter Pills */}
       <View style={styles.filterBar}>
-        {FILTER_PILLS.map((pill) => {
+        {filterPills.map((pill) => {
           const isSelected = activeFilter === pill.id;
           return (
             <TouchableOpacity
@@ -179,6 +222,15 @@ export const TeamAttendanceScreen = ({ navigation }) => {
           );
         })}
       </View>
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        visible={calendarVisible}
+        onClose={() => setCalendarVisible(false)}
+        initialDate={selectedDate}
+        title="Filter Team Attendance by Date"
+        onSelectDate={(newDate) => setSelectedDate(newDate)}
+      />
 
       {/* SectionList */}
       <SectionList

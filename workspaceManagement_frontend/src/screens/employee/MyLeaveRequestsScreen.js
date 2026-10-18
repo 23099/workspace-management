@@ -15,6 +15,7 @@ import { useTheme } from '../../context/ThemeContext';
 import HeaderBar from '../../components/common/HeaderBar';
 import AppInput from '../../components/common/AppInput';
 import Icon from '../../components/common/Icon';
+import DatePickerModal from '../../components/common/DatePickerModal';
 import { validateLeaveDates } from '../../utils/validation';
 
 const LEAVE_TYPES = [
@@ -35,6 +36,7 @@ export const MyLeaveRequestsScreen = ({ navigation }) => {
   const [selectedType, setSelectedType] = useState('Annual Leave • Paid');
   const [startDate, setStartDate] = useState('2026-10-20');
   const [endDate, setEndDate] = useState('2026-10-21');
+  const [calendarField, setCalendarField] = useState(null); // 'start' | 'end' | null
   const [reason, setReason] = useState('Family emergency requiring travel to hometown...');
   const [submitted, setSubmitted] = useState(false);
 
@@ -121,25 +123,46 @@ export const MyLeaveRequestsScreen = ({ navigation }) => {
             })}
           </View>
 
-          {/* Start & End Dates */}
+          {/* Start & End Dates with Interactive Calendar */}
           <View style={styles.datesRow}>
             <View style={{ flex: 1, marginRight: 8 }}>
-              <AppInput
-                label="Start Date (YYYY-MM-DD)"
-                value={startDate}
-                onChangeText={setStartDate}
-                placeholder="2026-10-20"
-              />
+              <Text style={[styles.fieldLabel, { color: palette.textSecondary }]}>Start Date</Text>
+              <TouchableOpacity
+                style={[styles.datePickerBtn, { backgroundColor: palette.background, borderColor: palette.inputBorder }]}
+                onPress={() => setCalendarField('start')}
+                activeOpacity={0.7}
+              >
+                <Icon name="calendar" size={16} color={palette.primary} />
+                <Text style={[styles.datePickerBtnText, { color: palette.textPrimary }]}>{startDate}</Text>
+              </TouchableOpacity>
             </View>
             <View style={{ flex: 1 }}>
-              <AppInput
-                label="End Date (YYYY-MM-DD)"
-                value={endDate}
-                onChangeText={setEndDate}
-                placeholder="2026-10-21"
-              />
+              <Text style={[styles.fieldLabel, { color: palette.textSecondary }]}>End Date</Text>
+              <TouchableOpacity
+                style={[styles.datePickerBtn, { backgroundColor: palette.background, borderColor: palette.inputBorder }]}
+                onPress={() => setCalendarField('end')}
+                activeOpacity={0.7}
+              >
+                <Icon name="calendar" size={16} color={palette.primary} />
+                <Text style={[styles.datePickerBtnText, { color: palette.textPrimary }]}>{endDate}</Text>
+              </TouchableOpacity>
             </View>
           </View>
+
+          {/* Date Picker Modal */}
+          <DatePickerModal
+            visible={calendarField !== null}
+            onClose={() => setCalendarField(null)}
+            initialDate={calendarField === 'start' ? startDate : endDate}
+            title={calendarField === 'start' ? 'Select Leave Start Date' : 'Select Leave End Date'}
+            onSelectDate={(newDate) => {
+              if (calendarField === 'start') {
+                setStartDate(newDate);
+              } else {
+                setEndDate(newDate);
+              }
+            }}
+          />
 
           {/* Syllabus Requirement: Inline overlap error text */}
           {!dateValidation.valid && submitted && (
@@ -276,6 +299,25 @@ const styles = StyleSheet.create({
   },
   datesRow: {
     flexDirection: 'row',
+    marginBottom: 12,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  datePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 8,
+  },
+  datePickerBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   errorText: {
     color: '#DC2626',

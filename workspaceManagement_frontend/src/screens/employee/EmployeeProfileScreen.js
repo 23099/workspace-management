@@ -23,7 +23,7 @@ export const EmployeeProfileScreen = ({ navigation }) => {
   const palette = getRolePalette('EMPLOYEE');
 
   const [showAvatarModal, setShowAvatarModal] = useState(false);
-  const [biometricLogin, setBiometricLogin] = useState(true);
+  const [taskPushAlerts, setTaskPushAlerts] = useState(true);
 
   const handleLogout = () => {
     Alert.alert('Terminate Session', 'Are you sure you want to log out of employee workspace?', [
@@ -190,22 +190,22 @@ export const EmployeeProfileScreen = ({ navigation }) => {
           {/* Note: NO "Update Personal Info" button is rendered per blueprint specification */}
         </View>
 
-        {/* Security & Terminal Settings */}
+        {/* Workspace Preferences & Settings */}
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
           <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>
-            Security &amp; Terminal Settings
+            Workspace Preferences &amp; Settings
           </Text>
 
           <View style={styles.prefRow}>
             <View>
-              <Text style={[styles.prefTitle, { color: palette.textPrimary }]}>Biometric Quick Unlock</Text>
-              <Text style={[styles.prefSub, { color: palette.textSecondary }]}>Use FaceID / Fingerprint for check-ins</Text>
+              <Text style={[styles.prefTitle, { color: palette.textPrimary }]}>Task &amp; Sprint Push Alerts</Text>
+              <Text style={[styles.prefSub, { color: palette.textSecondary }]}>Notify when assigned sprint tasks or deadlines change</Text>
             </View>
             <Switch
-              value={biometricLogin}
-              onValueChange={setBiometricLogin}
+              value={taskPushAlerts}
+              onValueChange={setTaskPushAlerts}
               trackColor={{ false: '#CBD5E1', true: '#C7D2FE' }}
-              thumbColor={biometricLogin ? '#4338CA' : '#94A3B8'}
+              thumbColor={taskPushAlerts ? palette.primary : '#94A3B8'}
             />
           </View>
 
@@ -218,7 +218,7 @@ export const EmployeeProfileScreen = ({ navigation }) => {
               value={isDark}
               onValueChange={toggleTheme}
               trackColor={{ false: '#CBD5E1', true: '#C7D2FE' }}
-              thumbColor={isDark ? '#4338CA' : '#94A3B8'}
+              thumbColor={isDark ? palette.primary : '#94A3B8'}
             />
           </View>
         </View>

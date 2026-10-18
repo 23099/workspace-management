@@ -12,7 +12,13 @@ import {
   Alert,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import { resolveTicket, rejectTicket, addTicketMessage } from '../../store/slices/ticketsSlice';
+import {
+  resolveTicket,
+  rejectTicket,
+  addTicketMessage,
+  markInProgress,
+  reopenTicket,
+} from '../../store/slices/ticketsSlice';
 import { overrideAttendance } from '../../store/slices/attendanceSlice';
 import { useTheme } from '../../context/ThemeContext';
 import HeaderBar from '../../components/common/HeaderBar';
@@ -31,6 +37,48 @@ export const HRTicketDetailScreen = ({ navigation, route }) => {
   const [replyText, setReplyText] = useState('');
 
   const isOverrideType = ticket?.category === 'Attendance Correction' || ticket?.id === 'TKT-101';
+
+  const handleCloseTicket = () => {
+    Alert.alert(
+      'Resolve & Close Ticket',
+      `Close ticket #${ticket.id} (${ticket.subject})?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: '✓ Resolve & Close',
+          onPress: () => {
+            dispatch(
+              resolveTicket({
+                ticketId: ticket.id,
+                replyMessage: 'Ticket reviewed, resolved and officially closed by HR Operations.',
+              })
+            );
+            Alert.alert('Ticket Closed', `Ticket #${ticket.id} is now closed and marked RESOLVED.`);
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSetInProgress = () => {
+    dispatch(
+      markInProgress({
+        ticketId: ticket.id,
+        note: 'HR Operations has picked up this ticket. Active investigation with IT/Payroll underway.',
+      })
+    );
+    Alert.alert('Status Updated', `Ticket #${ticket.id} moved to IN_PROGRESS.`);
+  };
+
+  const handleReopen = () => {
+    dispatch(
+      reopenTicket({
+        ticketId: ticket.id,
+        note: 'Ticket reopened by HR Operations for follow-up review.',
+      })
+    );
+    Alert.alert('Ticket Reopened', `Ticket #${ticket.id} has been reopened.`);
+  };
 
   const handleApproveOverride = () => {
     Alert.alert(
@@ -203,6 +251,68 @@ export const HRTicketDetailScreen = ({ navigation, route }) => {
             )}
           </View>
         )}
+
+        {/* HR Ticket Lifecycle & Close Controls (Available for all ticket categories) */}
+        <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
+          <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>
+            HR Ticket Lifecycle & Resolution Controls
+          </Text>
+          <Text style={[styles.lifecycleSub, { color: palette.textSecondary }]}>
+            Current State: {ticket?.status === 'OPEN' ? 'OPEN (Pending HR Action)' : ticket?.status === 'IN_PROGRESS' ? 'IN PROGRESS (Under Active Investigation)' : 'RESOLVED (Ticket Closed)'}
+          </Text>
+
+          {ticket?.status === 'OPEN' && (
+            <View style={styles.lifecycleBtnRow}>
+              <TouchableOpacity
+                style={[styles.inProgressBtn, { borderColor: palette.primary, backgroundColor: palette.background }]}
+                onPress={handleSetInProgress}
+                activeOpacity={0.8}
+              >
+                <Icon name="time" size={15} color={palette.primary} />
+                <Text style={[styles.inProgressBtnText, { color: palette.primary }]}>Move to In-Progress</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.closeTicketBtn, { backgroundColor: '#16A34A' }]}
+                onPress={handleCloseTicket}
+                activeOpacity={0.85}
+              >
+                <Icon name="checkmark-circle" size={15} color="#FFFFFF" />
+                <Text style={styles.closeTicketBtnText}>Resolve & Close Ticket</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {ticket?.status === 'IN_PROGRESS' && (
+            <View style={styles.lifecycleBtnRow}>
+              <TouchableOpacity
+                style={[styles.closeTicketBtn, { backgroundColor: '#16A34A', flex: 1 }]}
+                onPress={handleCloseTicket}
+                activeOpacity={0.85}
+              >
+                <Icon name="checkmark-circle" size={15} color="#FFFFFF" />
+                <Text style={styles.closeTicketBtnText}>Resolve & Close Ticket</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {ticket?.status === 'RESOLVED' && (
+            <View style={styles.resolvedInfoBox}>
+              <View style={styles.resolvedBadgeRow}>
+                <Icon name="checkmark-circle" size={18} color="#16A34A" />
+                <Text style={styles.resolvedBadgeText}>Ticket is Resolved & Closed</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.reopenBtn, { borderColor: palette.primary, backgroundColor: palette.background }]}
+                onPress={handleReopen}
+                activeOpacity={0.8}
+              >
+                <Icon name="refresh" size={14} color={palette.primary} />
+                <Text style={[styles.reopenBtnText, { color: palette.primary }]}>Reopen Ticket</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
 
         {/* Audit & Discussion Timeline (Syllabus topic 3: flex column-reverse/timeline) */}
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
@@ -456,6 +566,74 @@ const styles = StyleSheet.create({
   sendReplyText: {
     color: '#FFFFFF',
     fontSize: 12,
+    fontWeight: '700',
+  },
+  lifecycleSub: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  lifecycleBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  inProgressBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 11,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
+  },
+  inProgressBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  closeTicketBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 11,
+    borderRadius: 8,
+    gap: 6,
+  },
+  closeTicketBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  resolvedInfoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+    backgroundColor: '#DCFCE7',
+    borderRadius: 8,
+  },
+  resolvedBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  resolvedBadgeText: {
+    color: '#16A34A',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  reopenBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    gap: 4,
+  },
+  reopenBtnText: {
+    fontSize: 11,
     fontWeight: '700',
   },
 });
