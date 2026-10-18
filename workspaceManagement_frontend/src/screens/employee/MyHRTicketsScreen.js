@@ -1,0 +1,388 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import { createTicket } from '../../store/slices/ticketsSlice';
+import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import HeaderBar from '../../components/common/HeaderBar';
+import AppInput from '../../components/common/AppInput';
+import Icon from '../../components/common/Icon';
+
+const CATEGORIES = ['Attendance Correction', 'Salary Issue', 'General Inquiry'];
+
+export const MyHRTicketsScreen = ({ navigation }) => {
+  const dispatch = useDispatch();
+  const { currentUser } = useAuth();
+  const { getRolePalette } = useTheme();
+  const palette = getRolePalette('EMPLOYEE');
+
+  const { tickets } = useSelector((state) => state.tickets);
+  const myTickets = tickets.filter(
+    (t) => t.userId === currentUser?.id || t.userId === 'EMP-089'
+  );
+
+  const [category, setCategory] = useState('Attendance Correction');
+  const [subject, setSubject] = useState('Forgot to check out on Oct 12');
+  const [targetDate, setTargetDate] = useState('2026-10-12');
+  const [requestedIn, setRequestedIn] = useState('09:02 AM');
+  const [requestedOut, setRequestedOut] = useState('05:15 PM');
+  const [explanation, setExplanation] = useState(
+    'Checked out at security desk after network disconnected. Attached physical sign-out log.'
+  );
+
+  const isAttendanceCorrection = category === 'Attendance Correction';
+
+  const handleSubmitTicket = () => {
+    if (!subject.trim() || !explanation.trim()) {
+      Alert.alert('Validation Error', 'Subject and explanation are required.');
+      return;
+    }
+
+    dispatch(
+      createTicket({
+        userId: currentUser?.id || 'EMP-089',
+        userName: currentUser?.name || 'Ali Raza',
+        category,
+        subject: subject.trim(),
+        explanation: explanation.trim(),
+        date: targetDate,
+        proposedAdjustment: isAttendanceCorrection
+          ? `Out ${requestedOut} / 8h 15m Full`
+          : null,
+        evidenceName: 'security_desk_signout.jpg',
+      })
+    );
+
+    Alert.alert(
+      'HR Ticket Submitted',
+      'Your ticket has been placed into the HR Operations Queue (Sana Khan).'
+    );
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <HeaderBar
+        title="HR Support & Attendance Override"
+        subtitle="Employee Inquiries"
+        showBack
+        navigation={navigation}
+      />
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* New Ticket Form Card */}
+        <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
+          <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>Open Support Ticket</Text>
+
+          {/* Category Chips */}
+          <Text style={[styles.label, { color: palette.textPrimary }]}>Category</Text>
+          <View style={styles.chipsRow}>
+            {CATEGORIES.map((cat) => {
+              const isSelected = category === cat;
+              return (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.chip,
+                    { borderColor: palette.cardBorder },
+                    isSelected && { backgroundColor: palette.primary, borderColor: palette.primary },
+                  ]}
+                  onPress={() => setCategory(cat)}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      isSelected ? { color: '#FFFFFF' } : { color: palette.textPrimary },
+                    ]}
+                  >
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Conditional Attendance Correction Details Sub-Card */}
+          {isAttendanceCorrection && (
+            <View style={[styles.overrideSubCard, { backgroundColor: palette.inputBackground, borderColor: palette.cardBorder }]}>
+              <View style={styles.overrideHeaderRow}>
+                <Icon name="time" size={15} color={palette.primary} />
+                <Text style={[styles.overrideSubTitle, { color: palette.textPrimary }]}>
+                  Attendance Correction Details
+                </Text>
+              </View>
+
+              <AppInput
+                label="Target Work Date"
+                value={targetDate}
+                onChangeText={setTargetDate}
+                placeholder="2026-10-12"
+              />
+
+              <View style={styles.timeRow}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <AppInput
+                    label="Requested Check-In"
+                    value={requestedIn}
+                    onChangeText={setRequestedIn}
+                    placeholder="09:02 AM"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppInput
+                    label="Requested Check-Out"
+                    value={requestedOut}
+                    onChangeText={setRequestedOut}
+                    placeholder="05:15 PM"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.mismatchAlert}>
+                <Icon name="alert-triangle" size={13} color="#D97706" />
+                <Text style={styles.mismatchAlertText}>
+                  Telemetry Mismatch: System logged 0.0h; proposed 8h 15m full shift.
+                </Text>
+              </View>
+            </View>
+          )}
+
+          <AppInput
+            label="Ticket Subject"
+            value={subject}
+            onChangeText={setSubject}
+            placeholder="e.g. Forgot to check out on Oct 12"
+          />
+
+          <AppInput
+            label="Detailed Explanation"
+            value={explanation}
+            onChangeText={setExplanation}
+            multiline
+            numberOfLines={3}
+            placeholder="Provide context on why punch was missed or discrepancy occurred..."
+          />
+
+          {/* Attached Evidence Chip */}
+          <Text style={[styles.label, { color: palette.textPrimary }]}>Attached Physical Evidence</Text>
+          <View style={styles.attachmentChip}>
+            <Icon name="document-text" size={14} color="#0F766E" />
+            <Text style={styles.attachmentText}>security_desk_signout.jpg (Attached)</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitBtn, { backgroundColor: palette.primary }]}
+            onPress={handleSubmitTicket}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.submitBtnText}>Submit HR Ticket</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Ticket History & Logs */}
+        <Text style={[styles.sectionHeading, { color: palette.textPrimary }]}>
+          Ticket History &amp; Logs
+        </Text>
+        {myTickets.map((t) => (
+          <View
+            key={t.id}
+            style={[styles.ticketCard, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}
+          >
+            <View style={styles.ticketTopRow}>
+              <Text style={[styles.ticketId, { color: palette.primary }]}>#{t.id}</Text>
+              <View
+                style={[
+                  styles.statusTag,
+                  t.status === 'RESOLVED' ? styles.tagResolved : styles.tagOpen,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusTagText,
+                    t.status === 'RESOLVED' ? styles.textResolved : styles.textOpen,
+                  ]}
+                >
+                  {t.status}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={[styles.ticketSubject, { color: palette.textPrimary }]}>{t.subject}</Text>
+            <Text style={[styles.ticketExpl, { color: palette.textSecondary }]}>{t.explanation}</Text>
+
+            {Boolean(t.proposedAdjustment) && (
+              <View style={styles.overrideSyncBox}>
+                <Text style={styles.overrideSyncText}>
+                  Override Adjustment: {t.proposedAdjustment}
+                </Text>
+              </View>
+            )}
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  card: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 18,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  overrideSubCard: {
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 12,
+  },
+  overrideHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  overrideSubTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  timeRow: {
+    flexDirection: 'row',
+  },
+  mismatchAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FEF3C7',
+    padding: 8,
+    borderRadius: 6,
+    marginTop: 4,
+  },
+  mismatchAlertText: {
+    fontSize: 11,
+    color: '#92400E',
+    fontWeight: '600',
+  },
+  attachmentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#99F6E4',
+    padding: 8,
+    borderRadius: 6,
+    gap: 6,
+    marginBottom: 14,
+  },
+  attachmentText: {
+    fontSize: 11,
+    color: '#0F766E',
+    fontWeight: '600',
+  },
+  submitBtn: {
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  submitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  sectionHeading: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  ticketCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 10,
+  },
+  ticketTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  ticketId: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  statusTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  tagOpen: { backgroundColor: '#FEF3C7' },
+  tagResolved: { backgroundColor: '#DCFCE7' },
+  statusTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  textOpen: { color: '#B45309' },
+  textResolved: { color: '#16A34A' },
+  ticketSubject: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  ticketExpl: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  overrideSyncBox: {
+    marginTop: 8,
+    backgroundColor: '#F0FDFA',
+    padding: 6,
+    borderRadius: 6,
+  },
+  overrideSyncText: {
+    fontSize: 11,
+    color: '#0F766E',
+    fontWeight: '600',
+  },
+});
+
+export default MyHRTicketsScreen;
