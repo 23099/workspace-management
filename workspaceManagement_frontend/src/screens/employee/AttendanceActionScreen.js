@@ -83,9 +83,7 @@ export const AttendanceActionScreen = ({ navigation }) => {
   // useReducer hook for GPS telemetry
   const [gpsState, dispatch] = useReducer(gpsReducer, initialGPSState);
 
-  const todayRecord = logs.find(
-    (l) => l.userId === currentUser?.id || l.userId === 'EMP-089'
-  );
+  const todayRecord = logs.find((l) => l.userId === currentUser?.id);
   const isCheckedIn = Boolean(todayRecord && todayRecord.status === 'PRESENT');
 
   const handleToggleShiftPunch = () => {
@@ -99,7 +97,7 @@ export const AttendanceActionScreen = ({ navigation }) => {
     }
 
     if (isCheckedIn) {
-      reduxDispatch(checkOut({ userId: currentUser?.id || 'EMP-089' }));
+      reduxDispatch(checkOut({ userId: currentUser?.id || '' }));
       Alert.alert('Check-Out Confirmed', 'You have successfully punched out of your current shift.');
     } else {
       reduxDispatch(

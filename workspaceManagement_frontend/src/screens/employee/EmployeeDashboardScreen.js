@@ -20,9 +20,32 @@ export const EmployeeDashboardScreen = ({ navigation }) => {
 
   const { tasks } = useSelector((state) => state.tasks);
   const { logs } = useSelector((state) => state.attendance);
+  const salaryConfig = useSelector((state) => state.salary);
 
-  const activeTask = tasks.find((t) => t.assignedToId === currentUser?.id || t.id === 'TSK-408') || tasks[0];
-  const todayLog = logs.find((l) => l.userId === currentUser?.id || l.userId === 'EMP-089');
+  const monthPrefix = new Date().toISOString().slice(0, 7);
+  const monthLabel = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const activeTask = tasks.find((t) => t.assignedToId === currentUser?.id) || tasks[0];
+
+  const recentLogs = logs.filter((l) => l.userId === currentUser?.id).slice(0, 2);
+
+  const myMonthLogs = logs.filter(
+    (l) => l.userId === currentUser?.id && (l.date || '').startsWith(monthPrefix)
+  );
+  const presentDays = myMonthLogs.filter(
+    (l) => l.status === 'PRESENT' || l.status === 'CORRECTED_PRESENT'
+  ).length;
+  const cfg = salaryConfig.overrides[currentUser?.id] || salaryConfig.companyWide;
+  const myEstimate = calculateSalaryEstimate({
+    baseSalary: currentUser?.baseSalary || cfg.baseSalary || cfg.baseSalaryDefault || 0,
+    workingDaysPerPeriod: cfg.workingDaysPerPeriod,
+    presentDays,
+    paidLeaveDays: 0,
+    unpaidLeaveDays: 0,
+    absentDays: 0,
+    deductionPerAbsentDay: cfg.deductionPerAbsentDay,
+    deductionPerUnpaidLeaveDay: cfg.deductionPerUnpaidLeaveDay,
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
@@ -79,17 +102,17 @@ export const EmployeeDashboardScreen = ({ navigation }) => {
             <View style={styles.iconHeadingRow}>
               <Icon name="cash" size={18} color={palette.primary} />
               <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>
-                October 2026 Salary Estimate
+                {monthLabel} Salary Estimate
               </Text>
             </View>
             <Icon name="chevron-forward" size={16} color="#94A3B8" />
           </View>
 
           <Text style={[styles.salaryAmount, { color: palette.primary }]}>
-            {formatCurrency(161500)}
+            {formatCurrency(myEstimate.netSalary)}
           </Text>
           <Text style={[styles.salaryBreakdownSummary, { color: palette.textSecondary }]}>
-            Base 150k • Deductions -8.5k (1 absent, 1 unpaid) • Allowances +20k
+            {presentDays}/{cfg.workingDaysPerPeriod} days present so far
           </Text>
         </TouchableOpacity>
 
@@ -164,29 +187,42 @@ export const EmployeeDashboardScreen = ({ navigation }) => {
           Recent Attendance Logs
         </Text>
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
-          <View style={styles.recentLogRow}>
-            <View style={styles.recentDot} />
-            <View style={styles.recentInfo}>
-              <Text style={[styles.recentTitle, { color: palette.textPrimary }]}>
-                Today, Oct 15 • Check-In at 09:02 AM
-              </Text>
-              <Text style={styles.recentSub}>14.2m radius • Geofence verified • Terminal 04-A</Text>
-            </View>
-            <Text style={styles.statusOkText}>PRESENT</Text>
-          </View>
-
-          <View style={styles.recentDivider} />
-
-          <View style={styles.recentLogRow}>
-            <View style={[styles.recentDot, { backgroundColor: '#D97706' }]} />
-            <View style={styles.recentInfo}>
-              <Text style={[styles.recentTitle, { color: palette.textPrimary }]}>
-                Oct 12 • Physical Sign-Out Override
-              </Text>
-              <Text style={styles.recentSub}>HR Approved via Ticket #TKT-101</Text>
-            </View>
-            <Text style={[styles.statusOkText, { color: '#D97706' }]}>CORRECTED</Text>
-          </View>
+          {recentLogs.length === 0 ? (
+            <Text style={[styles.recentSub, { color: palette.textSecondary }]}>
+              No attendance punches yet — check in from the Attendance tab.
+            </Text>
+          ) : (
+            recentLogs.map((log, idx) => (
+              <View key={log.id}>
+                {idx > 0 && <View style={styles.recentDivider} />}
+                <View style={styles.recentLogRow}>
+                  <View
+                    style={[
+                      styles.recentDot,
+                      log.status === 'CORRECTED_PRESENT' && { backgroundColor: '#D97706' },
+                    ]}
+                  />
+                  <View style={styles.recentInfo}>
+                    <Text style={[styles.recentTitle, { color: palette.textPrimary }]}>
+                      {log.date} • Check-In {log.checkInTime || '—'}
+                    </Text>
+                    <Text style={styles.recentSub}>
+                      {log.distanceMeters !== undefined ? `${log.distanceMeters}m radius` : 'Manual Log'}
+                      {log.checkOutTime ? ` • Out ${log.checkOutTime}` : ' • Open'}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.statusOkText,
+                      log.status !== 'PRESENT' && { color: '#D97706' },
+                    ]}
+                  >
+                    {log.status}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
     </View>

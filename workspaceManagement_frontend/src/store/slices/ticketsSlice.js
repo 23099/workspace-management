@@ -1,8 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { SEED_HR_TICKETS } from '../../data/seedData';
 
 const initialState = {
-  tickets: [...SEED_HR_TICKETS],
+  tickets: [],
 };
 
 const ticketsSlice = createSlice({
@@ -87,7 +86,7 @@ const ticketsSlice = createSlice({
         });
       }
     },
-    resetTickets: () => ({ tickets: [...SEED_HR_TICKETS] }),
+    resetTickets: () => ({ tickets: [] }),
   },
 });
 

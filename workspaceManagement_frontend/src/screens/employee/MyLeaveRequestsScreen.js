@@ -31,7 +31,7 @@ export const MyLeaveRequestsScreen = ({ navigation, isEmbedded = false }) => {
   const palette = getRolePalette('EMPLOYEE');
 
   const { leaves } = useSelector((state) => state.leaves);
-  const myLeaves = leaves.filter((l) => l.userId === currentUser?.id || l.userId === 'EMP-089');
+  const myLeaves = leaves.filter((l) => l.userId === currentUser?.id);
 
   const [selectedType, setSelectedType] = useState('Annual Leave • Paid');
   const [startDate, setStartDate] = useState('2026-10-20');
