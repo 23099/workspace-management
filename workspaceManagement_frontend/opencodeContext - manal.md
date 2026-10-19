@@ -388,6 +388,29 @@ lives exclusively in AsyncStorage `@wms_users`; screens load it into local state
   - Verified: repo-wide grep for `EMP-089|Ali Raza|TKT-10[1-4]|Sana Khan|436500|161500|TSK-408|evidenceSignoutSheet`
     → zero matches in `src/`; all 66 JS files parse clean. Employee-role demos not tied to HR
     (e.g. `MySalaryEstimateScreen` month-cycle history, GPS presence card) left untouched — out of scope.
+  - **Department-credenza text scrub (decision honored: no departments — users are typed by the 5
+    premade roles Employee/Manager/HR/Admin/Client only).** Verified no add-departments feature
+    exists anywhere (`SEED_DEPARTMENTS` already gone; admin has only Company Profile + Employee
+    Directory). Fixed the leftover user-visible wording: `EmployeeDirectoryScreen` search
+    placeholder (`"...email, dept..."` → `"Search employees by name or email..."`),
+    `MyLeaveRequestsScreen` form subtitle (`"department overlap"` → `"team availability"`),
+    `ManagerProfileScreen` lock note (`"department assignment"` → `"role assignment"`), and the
+    default HR ticket chat message in `ticketsSlice` (`"relevant departments"` → `"relevant
+    teams"`). Left as-is (never user-visible): comments documenting the no-departments decision,
+    internal `deptSelect*` style names (used for manager chips), the always-empty `department`
+    data field on logs/users, and `superAdminConfig.department` (super-admin profile, not part of
+    the 5-role system,     never rendered).
+  - **Bug fix — Employee "HR Support" tile now opens the HR Tickets screen directly.** The tile
+    used to call `navigate('Work & Requests')` with no params, dropping the user on whichever hub
+    segment was last open. It now calls `navigate('MyHRTickets')` — the standalone HR Tickets
+    stack screen ("HR Support & Attendance Override", with its own back button); the action bubbles
+    from the Workspace tab up to the `EmployeeNavigator` stack where `MyHRTickets` is registered.
+    Only the designated tile was changed. (`WorkAndRequestsHubScreen` additionally now **clears**
+    its `initialTab` param after applying it — needed because React Navigation retains params
+    across visits, which would otherwise permanently force the TICKETS segment on later plain opens
+    of the hub; the remaining `initialTab` caller is the Salary screen's "Open an HR Ticket" link.
+    The "Request Leave" tile and "Active Task Deliverable" card still open the hub with no param —
+    same pattern, not part of this bug.)
 - **2026-10-19** — **Manager demo data removed; every manager screen now shows only the real team.**
   - `seedData.js`: `SEED_ATTENDANCE`, `SEED_LEAVES`, `SEED_TASKS`, `SEED_REQUIREMENTS` emptied to `[]`
     (the four were only read by the Redux slices' initial state; `storageService` first-run seed now
