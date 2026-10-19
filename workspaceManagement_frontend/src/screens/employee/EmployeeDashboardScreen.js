@@ -163,7 +163,7 @@ export const EmployeeDashboardScreen = ({ navigation }) => {
 
           <TouchableOpacity
             style={[styles.actionTile, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}
-            onPress={() => navigation.navigate('Work & Requests')}
+            onPress={() => navigation.navigate('MyHRTickets')}
           >
             <View style={[styles.tileIconBox, { backgroundColor: '#FEF3C7' }]}>
               <Icon name="ticket" size={18} color="#D97706" />

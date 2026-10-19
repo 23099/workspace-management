@@ -93,7 +93,7 @@ export const MyLeaveRequestsScreen = ({ navigation, isEmbedded = false }) => {
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.cardBorder }]}>
           <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>Submit Leave Request</Text>
           <Text style={[styles.cardSubtitle, { color: palette.textSecondary }]}>
-            Requests are verified against sprint commitments &amp; department overlap
+            Requests are verified against sprint commitments &amp; team availability
           </Text>
 
           {/* Leave Type Selector Chips */}
