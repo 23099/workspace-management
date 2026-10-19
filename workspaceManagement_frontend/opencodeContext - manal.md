@@ -137,7 +137,8 @@ src/
   with `React.createElement` (syllabus showcase); hides pill when `showStatus={false}`; returns
   `null` when `isEmbedded`.
 - **`AppInput`** — themed `forwardRef` TextInput; password eye toggle, "Locked (Admin Managed)" badge.
-- **`DatePickerModal`** — custom calendar (no native picker); "today" is hardcoded to **2026-10-18**.
+- **`DatePickerModal`** — custom calendar (no native picker); "today" now follows the **real device
+  date** (was hardcoded 2026-10-18). Its `initialDate` prop default is also the device date.
 - **DP gallery picker** (`src/utils/imagePicker.js`) — `pickProfilePictureFromGallery(onPicked)`
   wraps `launchImageLibrary` (`mediaType: 'photo'`, `selectionLimit: 1`); returns the picked
   photo's local URI; `<Image>` scales it into the circular DP frame. Replaces the deleted
@@ -296,7 +297,8 @@ lives exclusively in AsyncStorage `@wms_users`; screens load it into local state
   chip) were stripped in the same pass; `evidenceSignoutSheet` asset entry deleted.
   (Employee-portal persona demos not tied to HR — e.g. `MySalaryEstimateScreen`
   month cycles, GPS presence card — untouched, out of scope.)
-- "Today" in `DatePickerModal` is still fixed at **Oct 18, 2026** (app-wide date convention); the
+- "Today" in `DatePickerModal` now uses the **real device date** (fixed 2026-10-18 demo value
+  removed — see Changelog); the
   manager screens I changed default their own date fields/deadlines from the real device date.
 
 ## 10. Known Caveats / Tech Debt
@@ -411,6 +413,16 @@ lives exclusively in AsyncStorage `@wms_users`; screens load it into local state
     of the hub; the remaining `initialTab` caller is the Salary screen's "Open an HR Ticket" link.
     The "Request Leave" tile and "Active Task Deliverable" card still open the hub with no param —
     same pattern, not part of this bug.)
+  - **DatePicker "today" now live (HR attendance-calendar report checked → calendar access exists
+    and works; the real defect was hardcoded dates).** `DatePickerModal.js`: `TODAY_YEAR/MONTH/DAY`
+    now derive from `new Date()` instead of the fixed 2026-10-18 triplet, the badge reads
+    `Today (<Mon> <D>)` from the real date, and the `initialDate` default prop is the device date
+    instead of `'2026-10-18'` (affects its 7 call sites — all other 6 already pass `initialDate`).
+    Bonus fix found while verifying: `MyHRTicketsScreen` passed `selectedDate={targetDate}` but the
+    component's prop is `initialDate` — so the "Select Target Work Date" picker silently fell back
+    to the hardcoded Oct 18 default; prop name corrected to `initialDate={targetDate}`.
+    `DatePickerModal` "today" highlight + Today-jump button now follow the real device date on all
+    7 screens (HR attendance, manager team-attendance/deadlines, employee leave/ticket dates).
 - **2026-10-19** — **Manager demo data removed; every manager screen now shows only the real team.**
   - `seedData.js`: `SEED_ATTENDANCE`, `SEED_LEAVES`, `SEED_TASKS`, `SEED_REQUIREMENTS` emptied to `[]`
     (the four were only read by the Redux slices' initial state; `storageService` first-run seed now

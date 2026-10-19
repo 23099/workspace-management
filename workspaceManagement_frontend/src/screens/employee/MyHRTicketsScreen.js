@@ -230,7 +230,7 @@ export const MyHRTicketsScreen = ({ navigation, isEmbedded = false }) => {
 
       <DatePickerModal
         visible={showDatePicker}
-        selectedDate={targetDate}
+        initialDate={targetDate}
         onSelectDate={(date) => setTargetDate(date)}
         onClose={() => setShowDatePicker(false)}
         title="Select Target Work Date"
