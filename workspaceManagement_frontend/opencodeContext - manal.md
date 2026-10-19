@@ -423,6 +423,18 @@ lives exclusively in AsyncStorage `@wms_users`; screens load it into local state
     to the hardcoded Oct 18 default; prop name corrected to `initialDate={targetDate}`.
     `DatePickerModal` "today" highlight + Today-jump button now follow the real device date on all
     7 screens (HR attendance, manager team-attendance/deadlines, employee leave/ticket dates).
+  - **"Today = Oct 15" report checked → no longer exists (old build artifact), and one real leftover
+    fixed.** Repo-wide grep: zero `Oct 15` matches anywhere — the source was the old Employee
+    Dashboard's hardcoded log row `"Today, Oct 15 • Check-In 09:02 AM"`, already replaced this
+    session with real punches; `SEED_ATTENDANCE = []` so no stale dates can load (Manager was
+    always device-date-based — matches tester's "not present for Manager"). Leftover fixed in
+    `AttendanceActionScreen.js`: the static fake "Recent Punch Logs" row (`"Today, 09:02 AM • Shift
+    Check-In"` + hardcoded BSSID, shown even with zero punches) now renders the current user's real
+    punch history from Redux (`logs.filter(userId).slice(0, 5)`, newest first: date, check-in/out,
+    radial/terminal/verified, amber icon for non-PRESENT, divider per row, `"No punches yet"` empty
+    state). Also corrected the screen's `todayRecord` lookup to include today's date
+    (`l.userId === id && l.date === todayStr` — previously matched the user's OLDEST log of any
+    date, so a yesterday's-PRESENT log left the button stuck on "Check Out" next day).
 - **2026-10-19** — **Manager demo data removed; every manager screen now shows only the real team.**
   - `seedData.js`: `SEED_ATTENDANCE`, `SEED_LEAVES`, `SEED_TASKS`, `SEED_REQUIREMENTS` emptied to `[]`
     (the four were only read by the Redux slices' initial state; `storageService` first-run seed now
